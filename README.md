@@ -1,2 +1,2 @@
-# -KnitHack
+# KnitHack
 Computer controlled knitting machine
