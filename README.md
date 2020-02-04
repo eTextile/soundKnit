@@ -37,7 +37,7 @@ If so you knitting machine is ready to go, if not you will need to adjust follow
 
 ## Softsware
 ### Prerequisite
-The soundKnit.pd file is working with [Pure Data Vanilla V5.0](http://msp.ucsd.edu/)
+The soundKnit.pd file is working with [Pure Data Vanilla V0.5.x](http://msp.ucsd.edu/)
 Pure Data is an open source software that offer an accessible visual programming environment.
 The soundKnit.pd patch analyse the sound frequencies using FFT algorithm to generate the textile pattern.
 Pure Data will need few extension library to run our Software :
