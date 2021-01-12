@@ -12,9 +12,9 @@ You can purchase this electronic board from our shop (coming soon) or the one fr
 Since the 19th century, home knitting machines were a popular manufacturing tool which allowed knitters to produce rapidly knitted items to for household crafts. The possibility to use jacquard patterns started with the use of punched hole cards and began to be computerised in the 80's. The immediate and low raw material resource needed to produce a knitted surface is what make knitting machines mobile and accessible for experimenting and prototyping. Since the late 80's these knitting machines have stopped been produced. These last years hackers and makers have started to open up thises tools and found new ways to hack them by allowing the machines to be directly controlled by a modern computer. These hacked knitting machines became a sort of textile printer. Having a direct communication between digital tools and the knitting machine pushes the boundaries of traditional knitted patterns and gives the opportunity to think of new way's to design textile patterns.
 
 ## Project content
-- Hardware : we are using the [AYAB Arduino Shieldv1x](https://ayab-knitting.com/)
-- Firmware : Arduino inspired by the [KnitHack project](https://github.com/sokanno/KnitHack)
-- Software : a PureData patch dedicated to translate sound into visual sound spectrum (fft)
+- **Hardware** : We are using the [AYAB Arduino Shieldv1.4](https://www.etsy.com/shop/redpinkgreen)
+- **Firmware** : Arduino inspired by the [soundKnit project](https://github.com/sokanno/KnitHack)
+- **Software** : PureData patch : from sound frequency to visual spectrum (fft)
 
 ## Arduino firmware
 First of all you need to upload the Arduino soundKnit firmware to the Arduino board extended with the AYAB shield.
@@ -39,7 +39,7 @@ If so you knitting machine is ready to go, if not you will need to adjust follow
  #define START_POS_R value
 ```
 
-## Softsware
+## Software
 ### Prerequisite
 The soundKnit.pd file is working with [Pure Data Vanilla V0.5.x](http://msp.ucsd.edu/)
 Pure Data is an open source software that offer an accessible visual programming environment.
@@ -76,6 +76,6 @@ A bip when you pass the end ligne sensor end a bip to tell you when all stitch's
 - For more technicals specifications you can read the [service manual](TODO)
 
 ### Processing
-This simple sketch allow you to send any black and white image
+This simple sketch allow you to send any black and white image [200 pixels width]
 
 # TODO
