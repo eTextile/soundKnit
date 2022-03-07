@@ -1,21 +1,21 @@
-#N canvas 1010 438 636 312 10;
+#N canvas 38 371 636 312 10;
 #N canvas 0 50 450 300 (subpatch) 0;
 #X array knit 200 float 0;
 #X coords 0 1 199 0 200 150 1 0 0;
 #X restore 418 148 graph;
-#X obj 393 151 vsl 20 145 0 50 0 1 SEUIL empty empty 0 -9 0 10 -203904
--1 -1 3150 1;
-#N canvas 260 255 684 611 controls 0;
+#X obj 393 151 vsl 20 145 0 50 0 1 SEUIL empty empty 0 -9 0 10 #c4c4fc
+#000000 #000000 250 1;
+#N canvas 456 14 684 611 controls 0;
 #X msg 484 162 2;
 #X msg 484 229 3;
 #X obj 552 271 s CONTROL;
-#X obj 300 120 bng 20 250 50 0 empty empty CLEAR 25 15 0 15 -260097
--260097 -45076;
-#X obj 300 142 bng 20 250 50 0 empty empty KNIT 25 15 0 15 -260097
--1 -1;
-#X floatatom 300 267 5 0 0 1 FRAME_POS FRAME_POS -;
-#X floatatom 300 246 5 0 0 1 FRAME_RATE - REC_FRAME_RATE;
-#N canvas 678 468 261 275 gemwin 0;
+#X obj 300 98 bng 20 250 50 0 empty empty CLEAR 25 15 0 15 #fc8000
+#fc8000 #2c004c;
+#X obj 300 120 bng 20 250 50 0 empty empty KNIT 25 15 0 15 #fc8000
+#000000 #000000;
+#X floatatom 300 267 5 0 0 1 FRAME_POS FRAME_POS - 0;
+#X floatatom 300 246 5 0 0 1 FRAME_RATE - REC_FRAME_RATE 0;
+#N canvas 668 431 261 275 gemwin 0;
 #X obj 26 21 inlet;
 #X obj 26 47 select 1;
 #X msg 71 98 0 \, destroy;
@@ -28,24 +28,22 @@
 #X connect 3 0 4 0;
 #X restore 486 112 pd gemwin;
 #X obj 192 83 loadbang;
-#X obj 300 76 tgl 20 0 empty empty SIMULATOR 25 15 0 15 -260097 -1
--1 0 1;
-#X obj 300 98 tgl 20 0 empty empty REC 25 15 0 15 -260097 -1 -1 0 1
-;
+#X obj 300 54 tgl 20 0 empty empty SIMULATOR 25 15 0 15 #fc8000 #000000
+#000000 0 1;
+#X obj 300 76 tgl 20 0 empty empty REC 25 15 0 15 #fc8000 #000000 #000000
+0 1;
 #X obj 95 251 sel 64;
 #X obj 95 298 delay 1200;
 #X msg 123 174 close;
 #X msg 45 37 devices;
-#X msg 95 153 open 0;
 #X obj 125 202 r KNITTING;
-#X obj 300 54 tgl 20 0 empty empty PORT_ON_OFF 25 15 0 15 -260097 -1
--1 0 1;
+#X obj 300 32 tgl 20 1 empty empty PORT_ON_OFF 25 15 0 15 #fc8000 #000000
+#000000 0 1;
 #X obj 95 87 select 1 0;
 #X obj 300 10 bng 20 250 50 0 empty empty CHECK_DEVICES 25 15 0 15
--260097 -1 -1;
-#X msg 76 62 set open \$1;
-#X obj 300 164 bng 20 250 50 0 empty empty NEXT_ROW 25 15 0 15 -260097
--1 -1;
+#fc8000 #000000 #000000;
+#X obj 300 142 bng 20 250 50 0 empty empty NEXT_ROW 25 15 0 15 #fc8000
+#000000 #000000;
 #X msg 484 254 4;
 #N canvas 944 507 178 213 bip 0;
 #X obj 24 16 inlet;
@@ -149,7 +147,7 @@
 #X connect 29 0 9 0;
 #X connect 29 1 23 1;
 #X restore 299 467 pd stitch_selector;
-#N canvas 1050 457 370 433 stitch_recorder 0;
+#N canvas 722 90 370 433 stitch_recorder 0;
 #X obj 226 218 until;
 #X obj 274 248 + 1;
 #X msg 331 216 0;
@@ -270,8 +268,7 @@
 #X connect 27 2 20 0;
 #X connect 27 3 10 0;
 #X restore 298 516 pd stitch_player;
-#N canvas 302 178 410 371 stitch_simulator 0;
-#X obj 33 9 gemhead;
+#N canvas 262 151 410 371 stitch_simulator 0;
 #X msg 75 196 GREY;
 #X obj 120 9 r SIMULATOR;
 #X msg 57 265 quality 0;
@@ -289,27 +286,28 @@
 #X obj 120 140 trigger bang anything;
 #X obj 197 110 trigger bang bang;
 #X obj 33 233 pix_set 200 200;
-#X connect 0 0 17 0;
-#X connect 1 0 17 0;
-#X connect 2 0 15 0;
-#X connect 3 0 4 0;
-#X connect 4 0 9 0;
-#X connect 5 0 17 1;
-#X connect 6 0 7 1;
-#X connect 7 0 6 0;
-#X connect 7 0 5 1;
-#X connect 8 0 3 0;
-#X connect 8 0 1 0;
+#X obj 33 9 gemhead;
+#X connect 0 0 16 0;
+#X connect 1 0 14 0;
+#X connect 2 0 3 0;
+#X connect 3 0 8 0;
+#X connect 4 0 16 1;
+#X connect 5 0 6 1;
+#X connect 6 0 5 0;
+#X connect 6 0 4 1;
+#X connect 7 0 2 0;
+#X connect 7 0 0 0;
+#X connect 9 0 10 0;
 #X connect 10 0 11 0;
-#X connect 11 0 12 0;
-#X connect 12 0 7 1;
-#X connect 13 0 10 0;
-#X connect 14 0 16 0;
-#X connect 15 0 5 0;
-#X connect 15 1 7 0;
-#X connect 16 0 17 1;
-#X connect 16 1 7 1;
-#X connect 17 0 4 0;
+#X connect 11 0 6 1;
+#X connect 12 0 9 0;
+#X connect 13 0 15 0;
+#X connect 14 0 4 0;
+#X connect 14 1 6 0;
+#X connect 15 0 16 1;
+#X connect 15 1 6 1;
+#X connect 16 0 3 0;
+#X connect 17 0 16 0;
 #X restore 298 565 pd stitch_simulator;
 #X obj 258 330 adc~;
 #X obj 552 158 loadbang;
@@ -354,14 +352,13 @@
 #X connect 14 0 11 1;
 #X connect 15 0 11 1;
 #X restore 257 369 pd fft;
-#X floatatom 300 225 5 0 200 1 BACKGROUND - BACKGROUND;
-#X obj 95 228 comport 0 38400;
+#X floatatom 300 225 5 0 200 1 BACKGROUND - BACKGROUND 0;
 #X obj 95 274 trigger bang bang bang;
-#X obj 300 186 tgl 20 0 BACKGROUND_IO empty BACKGROUND 25 15 0 15 -260097
--1 -1 1 1;
+#X obj 300 164 tgl 20 0 BACKGROUND_IO empty BACKGROUND 25 15 0 15 #fc8000
+#000000 #000000 0 1;
 #X obj 91 448 r incomingDatas;
 #X obj 91 495 unpack f f;
-#X floatatom 148 520 5 0 0 0 - - -;
+#X floatatom 148 520 5 0 0 0 - - - 0;
 #N canvas 805 137 450 300 IYAB_driver 0;
 #X obj 167 20 inlet;
 #X obj 251 206 t l, f 4;
@@ -381,54 +378,53 @@
 #X connect 6 1 2 0;
 #X restore -8 298 pd IYAB_driver;
 #X obj -8 323 s incomingDatas;
-#X floatatom 91 522 5 0 0 0 - - -;
+#X floatatom 91 522 5 0 0 0 - - - 0;
 #X text 584 209 REC_OFF;
 #X obj 101 472 print;
-#X obj 300 32 hradio 20 1 0 8 foo11_snd foo11_rcv empty 160 12 0 20
--162280 -4034 -45076 0;
+#X msg 95 153 open 32;
+#X obj 95 228 comport 32 9600;
 #X connect 0 0 2 0;
 #X connect 1 0 2 0;
 #X connect 3 0 0 0;
 #X connect 4 0 1 0;
-#X connect 8 0 25 0;
+#X connect 8 0 23 0;
 #X connect 9 0 7 0;
 #X connect 10 0 2 0;
-#X connect 11 0 40 0;
-#X connect 12 0 24 0;
-#X connect 13 0 39 0;
-#X connect 14 0 39 0;
-#X connect 15 0 39 0;
-#X connect 16 0 39 0;
-#X connect 17 0 18 0;
-#X connect 18 0 15 0;
-#X connect 18 1 13 0;
-#X connect 19 0 14 0;
-#X connect 20 0 15 0;
-#X connect 21 0 22 0;
-#X connect 22 0 2 0;
-#X connect 23 0 36 1;
-#X connect 24 0 36 0;
-#X connect 25 0 6 0;
-#X connect 27 0 30 0;
-#X connect 29 0 26 0;
-#X connect 30 0 28 0;
-#X connect 32 0 37 0;
-#X connect 32 1 37 0;
-#X connect 33 0 35 0;
-#X connect 34 0 2 0;
+#X connect 11 0 37 0;
+#X connect 12 0 22 0;
+#X connect 13 0 48 0;
+#X connect 14 0 48 0;
+#X connect 15 0 48 0;
+#X connect 16 0 17 0;
+#X connect 17 0 47 0;
+#X connect 17 1 13 0;
+#X connect 18 0 14 0;
+#X connect 19 0 20 0;
+#X connect 20 0 2 0;
+#X connect 21 0 34 1;
+#X connect 22 0 34 0;
+#X connect 23 0 6 0;
+#X connect 25 0 28 0;
+#X connect 27 0 24 0;
+#X connect 28 0 26 0;
+#X connect 30 0 35 0;
+#X connect 30 1 35 0;
+#X connect 31 0 33 0;
+#X connect 32 0 2 0;
+#X connect 33 0 32 0;
+#X connect 35 0 34 1;
 #X connect 35 0 34 0;
-#X connect 37 0 36 1;
-#X connect 37 0 36 0;
-#X connect 39 0 11 0;
-#X connect 39 0 45 0;
-#X connect 40 0 12 0;
-#X connect 40 1 23 0;
-#X connect 40 2 21 0;
+#X connect 37 0 12 0;
+#X connect 37 1 21 0;
+#X connect 37 2 19 0;
+#X connect 39 0 40 0;
+#X connect 39 0 46 0;
+#X connect 40 0 44 0;
+#X connect 40 1 41 0;
 #X connect 42 0 43 0;
-#X connect 42 0 49 0;
-#X connect 43 0 47 0;
-#X connect 43 1 44 0;
-#X connect 45 0 46 0;
+#X connect 47 0 48 0;
+#X connect 48 0 11 0;
+#X connect 48 0 42 0;
 #X coords 0 -1 1 1 160 280 2 300 10;
 #X restore 18 19 pd controls;
 #N canvas 71 178 1153 478 (subpatch) 0;
