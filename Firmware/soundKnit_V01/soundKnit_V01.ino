@@ -11,8 +11,7 @@
 #define STITCHES              200      // Number of stitches
 #define PHASE_ENCODER_MIN     0        //
 #define PHASE_ENCODER_MAX     24       //
-#define STITCHES_BYTES        (PHASE_ENCODER_MAX + 1)
-#define SOLENOIDES            16       // Number of solenoides
+#define STITCHES_BYTES        25
 
 //#define STITCHES_PIN        A4       // I2C hardhare / Connected to the IO expander
 //#define CLOCK_PIN           A5       // I2C hardhare / Connected to the IO expander
@@ -29,8 +28,8 @@
 
 // SOFTWARE CONSTANTS
 #define THRESHOLD             500      // End lines sensors threshold
-#define STITCHE_START_L       0        // 1
-#define STITCHE_START_R       200      // 199 
+#define STITCHE_START_L       1        // 1
+#define STITCHE_START_R       199      // 199 
 #define HEADER                64       //
 #define FOOTER                255      //
 
@@ -42,12 +41,37 @@ boolean toggel_left = true;            // boolean to sens the RISING age of the 
 boolean startLeft = false;
 boolean startRight = false;
 
-byte serialData[STITCHES] = {0};       // One byte per stitch
-byte stitchBin[STITCHES_BYTES] = {0};  // One bit per stitch
+uint8_t serialData[STITCHES] = {0};       // One byte per stitch
+/*
+uint8_t stitchBin[STITCHES_BYTES] = {     // One bit per stitch
+  255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 
+  255, 0, 255, 0, 255, 0, 255, 0, 255, 0,
+  255, 0, 255, 0, 255
+};
+*/
+/*
+uint8_t stitchBin[STITCHES_BYTES] = {     // One bit per stitch
+  255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 
+  255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+  255, 255, 255, 255, 255
+};
+*/
+uint8_t stitchBin[STITCHES_BYTES] = {     // One bit per stitch
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0
+};
 
+/*
+uint8_t stitchBin[STITCHES_BYTES] = {     // One bit per stitch
+  0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 
+  0, 255, 0, 255, 0, 255, 0, 255, 0, 255,
+  0, 255, 0, 255, 0
+};
+*/
 uint8_t byte_index = 0;                // Index for incomming serial bytes
 int16_t stitchPos = 0;                  // Carriage stitch position
-uint8_t phaseEncoderPos = 0;
+uint8_t phaseEncoderCount = 0;
 uint8_t solenoidesPos = 0;
 boolean updateSolenoides = false;
 boolean DEBUG = false;                 // boolean for serial DEBUGING
@@ -59,9 +83,9 @@ void setup() {
 
   Serial.begin(BAUDRATE);
 
-  pinMode(ENC_PIN_1, INPUT);
-  pinMode(DIR_ENC_PIN, INPUT);
-  pinMode(ENC_PIN_3, INPUT);
+  pinMode(ENC_PIN_1, INPUT_PULLUP);
+  pinMode(DIR_ENC_PIN, INPUT_PULLUP);
+  pinMode(ENC_PIN_3, INPUT_PULLUP);
 
   attachInterrupt(0, stitches_ISR, RISING); // Interrupt 0 is associated to digital pin 2 (stitches encoder)
 }
@@ -73,7 +97,7 @@ void loop() {
     toggel_left = false;
     startLeft = true;
     stitchPos = STITCHE_START_L; // Set the stitch count to absolut stitchPosition
-    phaseEncoderPos = PHASE_ENCODER_MIN;
+    phaseEncoderCount = PHASE_ENCODER_MIN;
     if (DEBUG) Serial.println(), Serial.print(F("START_LEFT = ")), Serial.print(stitchPos);
   }
   // Start from the LEFT and hit the RIGHT end lignes sensors
@@ -90,7 +114,7 @@ void loop() {
     toggel_right = true;
     startRight = true;
     stitchPos = STITCHE_START_R; // Set the stitch count to absolut stitchPosition
-    phaseEncoderPos = PHASE_ENCODER_MAX;
+    phaseEncoderCount = PHASE_ENCODER_MAX;
     if (DEBUG) Serial.println(), Serial.print(F("START_RIGHT = ")), Serial.print(stitchPos);
   }
   // Start from the RIGHT and hit the LEFT end lignes sensors
@@ -104,10 +128,10 @@ void loop() {
   }
   if (updateSolenoides) {
     updateSolenoides = false;
-    if (cariageDir && solenoidesPos == 7) {
+    if (cariageDir && solenoidesPos == 0) {
       writeSolenoides();
     }
-    if (!cariageDir && solenoidesPos == 5) {
+    if (!cariageDir && solenoidesPos == 6) {
       writeSolenoides();
     }
   }
@@ -115,15 +139,15 @@ void loop() {
 
 //////////////////////////////////////////////////////
 void serialEvent() {
-  byte inputValue = 0;
+  uint8_t inputValue = 0;
   if (Serial.available() > 0) {
     inputValue = Serial.read();
     if (inputValue != FOOTER) {
       serialData[byte_index] = inputValue;
       byte_index++;
     } else {
-      for (int bytePos = 0; bytePos < STITCHES_BYTES; bytePos++) {
-        for (int bitPos = 0; bitPos < 8; bitPos++) {
+      for (uint8_t bytePos = 0; bytePos < STITCHES_BYTES; bytePos++) {
+        for (uint8_t bitPos = 0; bitPos < 8; bitPos++) {
           uint8_t index = (bytePos * 8) + bitPos;
           if (serialData[index] == 1) {
             bitSet(stitchBin[bytePos], bitPos);
@@ -141,22 +165,22 @@ void stitches_ISR() {
   lastPhaseEncoderState = phaseEncoderState;
   phaseEncoderState = digitalRead(ENC_PIN_3);
   if (startLeft || startRight) {
-    updatePhaseEncoderPos();
+    updatephaseEncoderCount();
     updateStitchPos();
     updateSolenoides = true;
     if (DEBUG) printOut();
   }
 }
 
-inline void updatePhaseEncoderPos () {
+inline void updatephaseEncoderCount () {
   if (phaseEncoderState != lastPhaseEncoderState) {
     // Carriage go LEFT to RIGHT
-    if (cariageDir && phaseEncoderPos < PHASE_ENCODER_MAX) {
-      phaseEncoderPos++;
+    if (cariageDir && phaseEncoderCount < PHASE_ENCODER_MAX) {
+      phaseEncoderCount++;
     }
     // Carriage go RIHT to LEFT
-    else if (!cariageDir && phaseEncoderPos > PHASE_ENCODER_MIN) {
-      phaseEncoderPos--;
+    else if (!cariageDir && phaseEncoderCount > PHASE_ENCODER_MIN) {
+      phaseEncoderCount--;
     }
   }
 }
@@ -174,14 +198,31 @@ inline void updateStitchPos () {
 }
 
 inline void writeSolenoides() {
-  if (!phaseEncoderState) {
-    Wire.beginTransmission(I2C_ADDR_SOL_1_8);
-    if (DEBUG) Serial.println(), Serial.print(F("WRITE_1_8"));
+  if (cariageDir){
+    if (!phaseEncoderState) {
+      Wire.beginTransmission(I2C_ADDR_SOL_1_8);
+      //Wire.write(stitchBin[phaseEncoderCount]);
+      Wire.write(0xFF);
+      if (DEBUG) Serial.println(), Serial.print(F("WRITE_1_8"));
+    } else {
+      Wire.beginTransmission(I2C_ADDR_SOL_9_16);
+      //Wire.write(stitchBin[phaseEncoderCount]);
+      Wire.write(0xFF);
+      if (DEBUG) Serial.println(), Serial.print(F("WRITE_9_16"));
+    }
   } else {
-    Wire.beginTransmission(I2C_ADDR_SOL_9_16);
-    if (DEBUG) Serial.println(), Serial.print(F("WRITE_9_16"));
+    if (!phaseEncoderState) {
+      Wire.beginTransmission(I2C_ADDR_SOL_9_16);
+      //Wire.write(stitchBin[phaseEncoderCount]);
+      Wire.write(0xFF);
+      if (DEBUG) Serial.println(), Serial.print(F("WRITE_1_8"));
+    } else {
+      Wire.beginTransmission(I2C_ADDR_SOL_1_8);
+      //Wire.write(stitchBin[phaseEncoderCount]);
+      Wire.write(0xFF);
+      if (DEBUG) Serial.println(), Serial.print(F("WRITE_9_16"));
+    }  
   }
-  Wire.write(stitchBin[phaseEncoderPos]);
   Wire.endTransmission();
 }
 
@@ -190,7 +231,7 @@ inline void printOut() {
   Serial.println();
   Serial.print(F(" CariageDir: ")), Serial.print(cariageDir);
   Serial.print(F(" PhaseEncoderState: ")), Serial.print(phaseEncoderState);
-  Serial.print(F(" PhaseEncoderPos: ")), Serial.print(phaseEncoderPos);
+  Serial.print(F(" phaseEncoderCount: ")), Serial.print(phaseEncoderCount);
   Serial.print(F(" StitchPos: ")), Serial.print(stitchPos);
   Serial.print(F(" SolenoidesPos: ")), Serial.print(solenoidesPos);
 }
