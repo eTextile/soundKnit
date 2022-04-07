@@ -42,33 +42,13 @@ boolean startLeft = false;
 boolean startRight = false;
 
 uint8_t serialData[STITCHES] = {0};       // One byte per stitch
-/*
+
 uint8_t stitchBin[STITCHES_BYTES] = {     // One bit per stitch
   255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 
   255, 0, 255, 0, 255, 0, 255, 0, 255, 0,
   255, 0, 255, 0, 255
 };
-*/
-/*
-uint8_t stitchBin[STITCHES_BYTES] = {     // One bit per stitch
-  255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 
-  255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-  255, 255, 255, 255, 255
-};
-*/
-uint8_t stitchBin[STITCHES_BYTES] = {     // One bit per stitch
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0
-};
 
-/*
-uint8_t stitchBin[STITCHES_BYTES] = {     // One bit per stitch
-  0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 
-  0, 255, 0, 255, 0, 255, 0, 255, 0, 255,
-  0, 255, 0, 255, 0
-};
-*/
 uint8_t byte_index = 0;                // Index for incomming serial bytes
 int16_t stitchPos = 0;                  // Carriage stitch position
 uint8_t phaseEncoderCount = 0;
@@ -201,25 +181,25 @@ inline void writeSolenoides() {
   if (cariageDir){
     if (!phaseEncoderState) {
       Wire.beginTransmission(I2C_ADDR_SOL_1_8);
-      //Wire.write(stitchBin[phaseEncoderCount]);
-      Wire.write(0xFF);
+      //Wire.write(0xFF);
+      Wire.write(stitchBin[phaseEncoderCount]);
       if (DEBUG) Serial.println(), Serial.print(F("WRITE_1_8"));
     } else {
       Wire.beginTransmission(I2C_ADDR_SOL_9_16);
-      //Wire.write(stitchBin[phaseEncoderCount]);
-      Wire.write(0xFF);
+      //Wire.write(0xFF);
+      Wire.write(stitchBin[phaseEncoderCount]);
       if (DEBUG) Serial.println(), Serial.print(F("WRITE_9_16"));
     }
   } else {
     if (!phaseEncoderState) {
       Wire.beginTransmission(I2C_ADDR_SOL_9_16);
-      //Wire.write(stitchBin[phaseEncoderCount]);
-      Wire.write(0xFF);
+      //Wire.write(0xFF);
+      Wire.write(stitchBin[phaseEncoderCount]);
       if (DEBUG) Serial.println(), Serial.print(F("WRITE_1_8"));
     } else {
       Wire.beginTransmission(I2C_ADDR_SOL_1_8);
-      //Wire.write(stitchBin[phaseEncoderCount]);
-      Wire.write(0xFF);
+      //Wire.write(0xFF);
+      Wire.write(stitchBin[phaseEncoderCount]);
       if (DEBUG) Serial.println(), Serial.print(F("WRITE_9_16"));
     }  
   }
