@@ -54,7 +54,7 @@ int selectedPattern = 5;
 boolean updateFrame = false;
 
 void setup() {
-  size(1500, 800);
+  size(1000, 600);
   //font = createFont("Georgia", 40);
   //textFont(font);
   rawImage = loadImage("../pictures/petit_jabron.png");
