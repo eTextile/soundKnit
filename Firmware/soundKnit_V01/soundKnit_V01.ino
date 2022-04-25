@@ -54,6 +54,7 @@ int16_t stitchPos = 0;                  // Carriage stitch position
 uint8_t phaseEncoderCount = 0;
 uint8_t solenoidesPos = 0;
 boolean updateSolenoides = false;
+
 boolean DEBUG = false;                 // boolean for serial DEBUGING
 
 ////////////////////////////////////////////////////////////////////////////////
