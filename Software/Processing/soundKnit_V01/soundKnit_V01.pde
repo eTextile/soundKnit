@@ -30,8 +30,13 @@ int IMAGE_H = 0;                        // The image height in pixel
 int IMAGE_SIZE = 0;                     // The image size in pixel
 int IMAGE_OFFSET = 0;                   // Space to display the image in the middle of the canvas
 
+int BUTTON_COLS = 8;
+int BUTTON_ROWS = 8;
+int BUTTON_SIZE = 15;
+Button buttons[][];
+
 final boolean COMPORT = false;          // Set it true to connect your knitter
-final boolean DEBUG   = true;          //
+final boolean DEBUG   = false;          //
 
 char inputChar;                         // Variable to store incoming data
 
@@ -39,6 +44,8 @@ PImage rawImage;                        // Loded image
 byte[]binArray;
 byte[][]patternLayers;
 byte[] serialData;
+int nx = 10;
+int ny = 10;
 
 PFont font;
 int lineIndex = 0;                      // Store the current row to knitt
@@ -81,6 +88,15 @@ void setup() {
   if (DEBUG) println("PIXEL_SIZE: " + PIXEL_SIZE);
   if (DEBUG) println("PADDING_SIZE: " + PADDING_SIZE);
   if (DEBUG) println("LINE_INDEX: " + lineIndex);
+  
+   buttons = new Button[BUTTON_ROWS][BUTTON_COLS];   // buttons array 
+
+  for ( int i=0; i<BUTTON_ROWS; i++ ) {
+    for ( int j=0; j<BUTTON_COLS; j++ ) {
+      buttons[i][j] = new Button( );  // fill the array with buttons
+    }
+  }
+
 }
 
 void draw() {
