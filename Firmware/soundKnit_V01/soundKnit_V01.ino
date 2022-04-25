@@ -11,7 +11,7 @@
 #define STITCHES              200      // Number of stitches
 #define PHASE_ENCODER_MIN     0        //
 #define PHASE_ENCODER_MAX     24       //
-#define STITCHES_BYTES        25
+#define STITCHES_BYTES        25       //
 
 //#define STITCHES_PIN        A4       // I2C hardhare / Connected to the IO expander
 //#define CLOCK_PIN           A5       // I2C hardhare / Connected to the IO expander
@@ -29,7 +29,7 @@
 // SOFTWARE CONSTANTS
 #define THRESHOLD             500      // End lines sensors threshold
 #define STITCHE_START_L       1        // 1
-#define STITCHE_START_R       199      // 199 
+#define STITCHE_START_R       201      // 199 
 #define HEADER                64       //
 #define FOOTER                255      //
 
@@ -44,30 +44,25 @@ boolean startRight = false;
 uint8_t serialData[STITCHES] = {0};       // One byte per stitch
 
 uint8_t stitchBin[STITCHES_BYTES] = {     // One bit per stitch
-  0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 
+  0, 255, 0, 255, 0, 255, 0, 255, 0, 255,
   0, 255, 0, 255, 0, 255, 0, 255, 0, 255,
   0, 255, 0, 255, 0
 };
 
-uint8_t byte_index = 0;                // Index for incomming serial bytes
 int16_t stitchPos = 0;                  // Carriage stitch position
 uint8_t phaseEncoderCount = 0;
 uint8_t solenoidesPos = 0;
 boolean updateSolenoides = false;
 
-boolean DEBUG = false;                 // boolean for serial DEBUGING
+boolean DEBUG = true;                 // boolean for serial DEBUGING
 
 ////////////////////////////////////////////////////////////////////////////////
 void setup() {
-
-  Wire.begin();
-
   Serial.begin(BAUDRATE);
-
+  Wire.begin();
   pinMode(ENC_PIN_1, INPUT_PULLUP);
   pinMode(DIR_ENC_PIN, INPUT_PULLUP);
   pinMode(ENC_PIN_3, INPUT_PULLUP);
-
   attachInterrupt(0, stitches_ISR, RISING); // Interrupt 0 is associated to digital pin 2 (stitches encoder)
 }
 
@@ -88,7 +83,6 @@ void loop() {
     startLeft = false;
     if (DEBUG) Serial.println(), Serial.print(F("STOP_RIGHT = ")), Serial.print(stitchPos);
     if (!DEBUG) Serial.write(HEADER);
-    byte_index = 0;
   }
   // Start from the RIGHT and look if the RIGHT end lignes sensors is passed
   if (!cariageDir && analogRead(END_PIN_R) > THRESHOLD && toggel_right == false) {
@@ -105,7 +99,6 @@ void loop() {
     startRight = false;
     if (DEBUG) Serial.println(), Serial.print(F("STOP_LEFT = ")), Serial.print(stitchPos);
     if (!DEBUG) Serial.write(HEADER);
-    byte_index = 0;
   }
   if (updateSolenoides) {
     updateSolenoides = false;
@@ -120,23 +113,28 @@ void loop() {
 
 //////////////////////////////////////////////////////
 void serialEvent() {
+  static uint8_t byte_index = 0;                // Index for incomming serial bytes
+
   uint8_t inputValue = 0;
+  uint8_t stitchBin_bitIndex = 0;
+  uint8_t stitchBin_byteIndex = 0;
+
   if (Serial.available() > 0) {
     inputValue = Serial.read();
     if (inputValue != FOOTER) {
       serialData[byte_index] = inputValue;
       byte_index++;
     } else {
-      for (uint8_t bytePos = 0; bytePos < STITCHES_BYTES; bytePos++) {
-        for (uint8_t bitPos = 0; bitPos < 8; bitPos++) {
-          uint8_t index = (bytePos * 8) + bitPos;
-          if (serialData[index] == 1) {
-            bitSet(stitchBin[bytePos], bitPos);
-          } else {
-            bitClear(stitchBin[bytePos], bitPos);
-          }
+      for (uint8_t byteIndex = 0; byteIndex < STITCHES_BYTES; byteIndex++) {
+        stitchBin_bitIndex = byteIndex % 8;
+        if (serialData[byteIndex] == 1) {
+          bitSet(stitchBin[stitchBin_byteIndex], stitchBin_bitIndex);
+        } else {
+          bitClear(stitchBin[stitchBin_byteIndex], stitchBin_bitIndex);
         }
+        if (stitchBin_bitIndex == 7) stitchBin_byteIndex++;
       }
+      byte_index = 0;
     }
   }
 }
@@ -179,7 +177,7 @@ inline void updateStitchPos () {
 }
 
 inline void writeSolenoides() {
-  if (cariageDir){
+  if (cariageDir) {
     if (!phaseEncoderState) {
       Wire.beginTransmission(I2C_ADDR_SOL_1_8);
       Wire.write(stitchBin[phaseEncoderCount]);
@@ -198,7 +196,7 @@ inline void writeSolenoides() {
       Wire.beginTransmission(I2C_ADDR_SOL_1_8);
       Wire.write(stitchBin[phaseEncoderCount]);
       if (DEBUG) Serial.println(), Serial.print(F("WRITE_1_8"));
-    } 
+    }
   }
   Wire.endTransmission();
 }
