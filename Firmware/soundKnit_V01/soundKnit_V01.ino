@@ -171,7 +171,7 @@ void stitches_ISR() {
   lastPhaseEncoderState = phaseEncoderState;
   phaseEncoderState = digitalRead(ENC_PIN_3);
   if (startLeft || startRight) {
-    updatephaseEncoderCount();
+    updatephaseEncoderPos();
     updateStitchPos();
     updateSolenoides = true;
     #ifdef DEBUG
@@ -180,13 +180,13 @@ void stitches_ISR() {
   }
 }
 
-inline void updatephaseEncoderCount() {
+inline void updatephaseEncoderPos() {
   if (phaseEncoderState != lastPhaseEncoderState) {
     switch (cariageDir) {
       case LEFT_RIGHT: // Carriage go LEFT to RIGHT
         if (phaseEncoderCount < PHASE_ENCODER_MAX) phaseEncoderCount++;
         break;
-      case RIGHT_LEFT:
+      case RIGHT_LEFT: // Carriage go RIHT to LEFT
         if (phaseEncoderCount > PHASE_ENCODER_MIN) phaseEncoderCount--;
         break;
     }
@@ -236,7 +236,7 @@ inline void writeSolenoides() {
       #ifdef DEBUG
         Serial.printf("\nWRITE_1_8 : %b", stitchBin[phaseEncoderCount]);
       #endif
-    }      
+    }
     break;
   }
   Wire.endTransmission();
