@@ -28,10 +28,13 @@
 
 // SOFTWARE CONSTANTS
 #define THRESHOLD             500      // End lines sensors threshold
+
 #define STITCHE_START_L       1        // 1
-#define STITCHE_START_R       199      // 199
+#define STITCHE_START_R       201      // 199
+
 #define RIGHT_LEFT            0        //
 #define LEFT_RIGHT            1        //
+
 #define HEADER                64       //
 #define FOOTER                255      //
 
@@ -59,9 +62,10 @@ boolean updateSolenoides = false;         //
 
 #define  DEBUG;                           // serial DEBUGING
 
+////////////////////////////////////////////////////////////////////////////////
 void setup() {
-  Wire.begin();
   Serial.begin(BAUDRATE);
+  Wire.begin();
   pinMode(ENC_PIN_1, INPUT_PULLUP);
   pinMode(DIR_ENC_PIN, INPUT_PULLUP);
   pinMode(ENC_PIN_3, INPUT_PULLUP);
@@ -136,23 +140,28 @@ void loop() {
 
 //////////////////////////////////////////////////////
 void serialEvent() {
+  static uint8_t byte_index = 0;                // Index for incomming serial bytes
+
   uint8_t inputValue = 0;
+  uint8_t stitchBin_bitIndex = 0;
+  uint8_t stitchBin_byteIndex = 0;
+
   if (Serial.available() > 0) {
     inputValue = Serial.read();
     if (inputValue != FOOTER) {
       serialData[byte_index] = inputValue;
       byte_index++;
     } else {
-      for (uint8_t bytePos = 0; bytePos < STITCHES_BYTES; bytePos++) {
-        for (uint8_t bitPos = 0; bitPos < 8; bitPos++) {
-          uint8_t index = (bytePos * 8) + bitPos;
-          if (serialData[index] == 1) {
-            bitSet(stitchBin[bytePos], bitPos);
-          } else {
-            bitClear(stitchBin[bytePos], bitPos);
-          }
+      for (uint8_t byteIndex = 0; byteIndex < STITCHES_BYTES; byteIndex++) {
+        stitchBin_bitIndex = byteIndex % 8;
+        if (serialData[byteIndex] == 1) {
+          bitSet(stitchBin[stitchBin_byteIndex], stitchBin_bitIndex);
+        } else {
+          bitClear(stitchBin[stitchBin_byteIndex], stitchBin_bitIndex);
         }
+        if (stitchBin_bitIndex == 7) stitchBin_byteIndex++;
       }
+      byte_index = 0;
     }
   }
 }
