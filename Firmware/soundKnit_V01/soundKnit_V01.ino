@@ -152,9 +152,9 @@ void serialEvent() {
       serialData[byte_index] = inputValue;
       byte_index++;
     } else {
-      for (uint8_t byteIndex = 0; byteIndex < STITCHES_BYTES; byteIndex++) {
-        stitchBin_bitIndex = byteIndex % 8;
-        if (serialData[byteIndex] == 1) {
+      for (uint8_t index = 0; index < STITCHES; index++) {
+        stitchBin_bitIndex = index % 8;
+        if (serialData[index] == 1) {
           bitSet(stitchBin[stitchBin_byteIndex], stitchBin_bitIndex);
         } else {
           bitClear(stitchBin[stitchBin_byteIndex], stitchBin_bitIndex);
