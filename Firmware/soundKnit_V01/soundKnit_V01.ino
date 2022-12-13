@@ -82,6 +82,7 @@ void loop() {
         startLeft = true;
         stitchPos = STITCHE_START_L; // Set the stitch count to the left start position
         phaseEncoderCount = PHASE_ENCODER_MIN;
+        blip();
         #ifdef DEBUG
           Serial.printf("\nSTART_LEFT / stitchPos: %d", stitchPos);
         #endif
@@ -91,12 +92,13 @@ void loop() {
       if (analogRead(END_PIN_R) > THRESHOLD && toggel_right == true) {
         toggel_right = false;
         startLeft = false;
+        byte_index = 0;
+        blip();
         #ifdef DEBUG
           Serial.printf("\nSTOP_RIGHT / stitchPos: %d", stitchPos);
         #else
           Serial.write(HEADER);
         #endif
-        byte_index = 0;
       }
       break;
     case RIGHT_LEFT: // Carriage go RIGHT to LEFT
@@ -106,6 +108,7 @@ void loop() {
         startRight = true;
         stitchPos = STITCHE_START_R; // Set the stitch count to the right start position
         phaseEncoderCount = PHASE_ENCODER_MAX;
+        blip();
         #ifdef DEBUG
           Serial.printf("\nSTART_RIGHT = %d", stitchPos);
         #endif
@@ -115,12 +118,13 @@ void loop() {
       if (analogRead(END_PIN_L) > THRESHOLD && toggel_left == false) {
         toggel_left = true;
         startRight = false;
+        byte_index = 0;
+        blip();
         #ifdef DEBUG
           Serial.printf("\nSTOP_LEFT = %d", stitchPos);
         #else
           Serial.write(HEADER);
         #endif
-        byte_index = 0;
       }
       break;
   }
@@ -246,4 +250,10 @@ inline void writeSolenoides() {
 inline void printOut() {
   Serial.printf("\nCariageDir: %d / PhaseEncoderState: %d / PhaseEncoderState: %d / PhaseEncoderCount: %d / StitchPos: %d / SolenoidesPos: %d ",
                 cariageDir, phaseEncoderState, phaseEncoderState, phaseEncoderCount, stitchPos, solenoidesPos);
+}
+
+inline void blip(){
+  digitalWrite(PIEZO_PIN, HIGH);
+  delay(30);
+  digitalWrite(PIEZO_PIN, LOW);
 }
