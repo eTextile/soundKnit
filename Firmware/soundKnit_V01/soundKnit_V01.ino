@@ -76,7 +76,8 @@ void setup() {
 void loop() {
   switch (cariageDir) {
     case LEFT_RIGHT: // Carriage go LEFT to RIGHT
-      // Start from the LEFT and look if LEFT end ligne sensor is passed
+      // Test if LEFT end ligne sensor is passed
+      // if passed ...
       if (analogRead(END_PIN_L) > THRESHOLD && toggel_left == true) {
         toggel_left = false;
         startLeft = true;
@@ -87,8 +88,8 @@ void loop() {
           Serial.printf("\nSTART_LEFT / stitchPos: %d", stitchPos);
         #endif
       }
-      // Start from the LEFT and look if RIGHT end ligne sensor is passed
-      // if the sensor is hited then ask to the computer to send the next array of values
+      // Test if RIGHT end ligne sensor is passed
+      // If passed then ask to the computer to send the next array of values
       if (analogRead(END_PIN_R) > THRESHOLD && toggel_right == true) {
         toggel_right = false;
         startLeft = false;
@@ -97,12 +98,13 @@ void loop() {
         #ifdef DEBUG
           Serial.printf("\nSTOP_RIGHT / stitchPos: %d", stitchPos);
         #else
-          Serial.write(HEADER);
+          Serial.write(HEADER); // Data request!
         #endif
       }
       break;
     case RIGHT_LEFT: // Carriage go RIGHT to LEFT
-      // Start from the RIGHT and look if the RIGHT end ligne sensor is passed
+      // Test if the RIGHT end ligne sensor is passed
+      // if passed ...
       if (analogRead(END_PIN_R) > THRESHOLD && toggel_right == false) {
         toggel_right = true;
         startRight = true;
@@ -113,8 +115,8 @@ void loop() {
           Serial.printf("\nSTART_RIGHT = %d", stitchPos);
         #endif
       }
-      // Start from the RIGHT and look if the LEFT end ligne sensor is passed
-      // if the sensor is hited then ask to the computer to send the next array of values
+      // Test if the LEFT end ligne sensor is passed
+      // if passed then ask to the computer to send the next array of values
       if (analogRead(END_PIN_L) > THRESHOLD && toggel_left == false) {
         toggel_left = true;
         startRight = false;
@@ -123,7 +125,7 @@ void loop() {
         #ifdef DEBUG
           Serial.printf("\nSTOP_LEFT = %d", stitchPos);
         #else
-          Serial.write(HEADER);
+          Serial.write(HEADER); // Data request!
         #endif
       }
       break;
