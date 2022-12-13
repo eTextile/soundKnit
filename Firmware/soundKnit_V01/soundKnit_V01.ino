@@ -20,8 +20,8 @@
 #define ENC_PIN_1             2        // Encoder 1 - stitches encoder (interrupt driven) 
 #define DIR_ENC_PIN           3        // Encoder 2 - cariageDir encoder
 #define ENC_PIN_3             4        // Encoder 3 - phase encoder
-#define END_PIN_R             A0       // End Of Line Right for analog in
-#define END_PIN_L             A1       // end Of Line Left for analog in
+#define EOL_R_PIN             A0       // End Of Line Right for analog in
+#define EOL_L_PIN             A1       // end Of Line Left for analog in
 #define PIEZO_PIN             9        // Not used
 #define I2C_ADDR_SOL_1_8      0x20     // IO expander chip addres
 #define I2C_ADDR_SOL_9_16     0x21     // IO expander chip addres
@@ -41,10 +41,11 @@
 boolean phaseEncoderState = false;     // Phase encoder state
 boolean lastPhaseEncoderState = false; // Phase encoder last state
 boolean cariageDir = false;            // Carriage direction　0:unknown　1:right　2:left
+
 boolean toggel_right = true;           // boolean to sens the RISING age of the phase encoder when the carriage going RIGHT
 boolean toggel_left = true;            // boolean to sens the RISING age of the phase encoder when the carriage going LEFT
-boolean startLeft = false;
 boolean startRight = false;
+boolean startLeft = false;
 
 uint8_t serialData[STITCHES] = {0};       // One byte per stitch
 
@@ -78,25 +79,27 @@ void loop() {
     case LEFT_RIGHT: // Carriage go LEFT to RIGHT
       // Test if LEFT end ligne sensor is passed
       // if passed ...
-      if (analogRead(END_PIN_L) > THRESHOLD && toggel_left == true) {
+      if (analogRead(EOL_L_PIN) > THRESHOLD && toggel_left == true) {
         toggel_left = false;
         startLeft = true;
         stitchPos = STITCHE_START_L; // Set the stitch count to the left start position
         phaseEncoderCount = PHASE_ENCODER_MIN;
         blip();
         #ifdef DEBUG
-          Serial.printf("\nSTART_LEFT / stitchPos: %d", stitchPos);
+          Serial.println();
+          Serial.print("LEFT / START / stitchPos: " + stitchPos);
         #endif
       }
       // Test if RIGHT end ligne sensor is passed
       // If passed then ask to the computer to send the next array of values
-      if (analogRead(END_PIN_R) > THRESHOLD && toggel_right == true) {
+      if (analogRead(EOL_R_PIN) > THRESHOLD && toggel_right == true) {
         toggel_right = false;
         startLeft = false;
         byte_index = 0;
         blip();
         #ifdef DEBUG
-          Serial.printf("\nSTOP_RIGHT / stitchPos: %d", stitchPos);
+          Serial.println();
+          Serial.print("RIGHT / STOP / stitchPos: " + stitchPos);
         #else
           Serial.write(HEADER); // Data request!
         #endif
@@ -104,26 +107,28 @@ void loop() {
       break;
     case RIGHT_LEFT: // Carriage go RIGHT to LEFT
       // Test if the RIGHT end ligne sensor is passed
-      // if passed ...
-      if (analogRead(END_PIN_R) > THRESHOLD && toggel_right == false) {
+      // if passed set all default values 
+      if (analogRead(EOL_R_PIN) > THRESHOLD && toggel_right == false) {
         toggel_right = true;
         startRight = true;
         stitchPos = STITCHE_START_R; // Set the stitch count to the right start position
         phaseEncoderCount = PHASE_ENCODER_MAX;
         blip();
         #ifdef DEBUG
-          Serial.printf("\nSTART_RIGHT = %d", stitchPos);
+          Serial.println();
+          Serial.print("RIGHT / START / stitchPos: " + stitchPos);
         #endif
       }
       // Test if the LEFT end ligne sensor is passed
       // if passed then ask to the computer to send the next array of values
-      if (analogRead(END_PIN_L) > THRESHOLD && toggel_left == false) {
+      if (analogRead(EOL_L_PIN) > THRESHOLD && toggel_left == false) {
         toggel_left = true;
         startRight = false;
         byte_index = 0;
         blip();
         #ifdef DEBUG
-          Serial.printf("\nSTOP_LEFT = %d", stitchPos);
+          Serial.println();
+          Serial.print("LEFT / STOP / stitchPos: " + stitchPos);
         #else
           Serial.write(HEADER); // Data request!
         #endif
@@ -131,22 +136,12 @@ void loop() {
       break;
   }
 
-  if (updateSolenoides) {
-    updateSolenoides = false;
-    switch (cariageDir) {
-      case LEFT_RIGHT: // Carriage go LEFT to RIGHT
-        if (solenoidesPos == 0) writeSolenoides();
-        break;
-      case RIGHT_LEFT: // Carriage go RIGHT to LEFT
-        if (solenoidesPos == 6) writeSolenoides();
-        break;
-    }
-  }
+  writeSolenoides();
 }
 
 //////////////////////////////////////////////////////
 void serialEvent() {
-  static uint8_t byte_index = 0;                // Index for incomming serial bytes
+  static uint8_t byte_index = 0; // Index for incomming serial bytes
 
   uint8_t inputValue = 0;
   uint8_t stitchBin_bitIndex = 0;
@@ -212,46 +207,63 @@ inline void updateStitchPos() {
 }
 
 inline void writeSolenoides() {
-  switch (cariageDir) {
+  if (updateSolenoides) {
+    updateSolenoides = false;
+    switch (cariageDir) {
     case LEFT_RIGHT: // Carriage go LEFT to RIGHT
-    if (!phaseEncoderState) {
-      Wire.beginTransmission(I2C_ADDR_SOL_1_8);
-      Wire.write(stitchBin[phaseEncoderCount]);
-      #ifdef DEBUG
-        Serial.printf("\nWRITE_1_8 : %b", stitchBin[phaseEncoderCount]);
-      #endif
-    }
-    else {
-      Wire.beginTransmission(I2C_ADDR_SOL_9_16);
-      Wire.write(stitchBin[phaseEncoderCount]);
-      #ifdef DEBUG
-        Serial.printf("\nWRITE_9_16 : %b", stitchBin[phaseEncoderCount]);
-      #endif
-    }      
-    break;
+      if (solenoidesPos == 0){
+        if (!phaseEncoderState) {
+          Wire.beginTransmission(I2C_ADDR_SOL_1_8);
+          Wire.write(stitchBin[phaseEncoderCount]);
+          #ifdef DEBUG
+            Serial.println();
+            Serial.print("WRITE_1_8: " + stitchBin[phaseEncoderCount]);
+          #endif
+        }
+        else {
+          Wire.beginTransmission(I2C_ADDR_SOL_9_16);
+          Wire.write(stitchBin[phaseEncoderCount]);
+          #ifdef DEBUG
+            Serial.println();
+            Serial.print("WRITE_9_16: " + stitchBin[phaseEncoderCount]);
+          #endif
+        }
+        Wire.endTransmission();
+      }     
+      break;
+    
     case RIGHT_LEFT: // Carriage go RIHT to LEFT
-    if (!phaseEncoderState) {
-      Wire.beginTransmission(I2C_ADDR_SOL_9_16);
-      Wire.write(stitchBin[phaseEncoderCount]);
-      #ifdef DEBUG
-        Serial.printf("\nWRITE_9_16 : %b", stitchBin[phaseEncoderCount]);
-      #endif
-    } else {
-      Wire.beginTransmission(I2C_ADDR_SOL_1_8);
-      Wire.write(stitchBin[phaseEncoderCount]);
-      #ifdef DEBUG
-        Serial.printf("\nWRITE_1_8 : %b", stitchBin[phaseEncoderCount]);
-      #endif
+      if (solenoidesPos == 0){
+        if (!phaseEncoderState) {
+          Wire.beginTransmission(I2C_ADDR_SOL_9_16);
+          Wire.write(stitchBin[phaseEncoderCount]);
+          #ifdef DEBUG
+            Serial.println();
+            Serial.print("WRITE_9_16: " + stitchBin[phaseEncoderCount]);
+          #endif
+        } else {
+          Wire.beginTransmission(I2C_ADDR_SOL_1_8);
+          Wire.write(stitchBin[phaseEncoderCount]);
+          #ifdef DEBUG
+            Serial.println();
+            Serial.print("WRITE_1_8: " + stitchBin[phaseEncoderCount]);
+          #endif
+        }
+        Wire.endTransmission();
+      }
+      break;
     }
-    break;
   }
-  Wire.endTransmission();
 }
 
 // Print out DEBUGING values
 inline void printOut() {
-  Serial.printf("\nCariageDir: %d / PhaseEncoderState: %d / PhaseEncoderState: %d / PhaseEncoderCount: %d / StitchPos: %d / SolenoidesPos: %d ",
-                cariageDir, phaseEncoderState, phaseEncoderState, phaseEncoderCount, stitchPos, solenoidesPos);
+  Serial.println();
+  Serial.print("CariageDir: " + cariageDir);
+  Serial.print(" PhaseEncoderState: " + phaseEncoderState);
+  Serial.print(" PhaseEncoderCount: " + phaseEncoderCount);
+  Serial.print(" StitchPos: " + stitchPos);
+  Serial.print(" SolenoidesPos: " + solenoidesPos);
 }
 
 inline void blip(){
