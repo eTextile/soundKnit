@@ -14,9 +14,9 @@
 #define STITCHES_BYTES        25       // 25 x 8 = 200
 
 // HARDWARE INPUT SYSTEM
-#define ENC_PIN_1             2        // Encoder 1 - stitches encoder (interrupt driven) 
-#define DIR_ENC_PIN           3        // Encoder 2 - cariageDir encoder
-#define ENC_PIN_3             4        // Encoder 3 - phase encoder
+#define ENC_PIN_1             2        // Encoder 1 - stitches encoder (interrupt driven)  (AYAB: ENC_PIN_A)
+#define DIR_ENC_PIN           3        // Encoder 2 - cariageDir encoder (AYAB : ENC_PIN_B)
+#define ENC_PIN_3             4        // Encoder 3 - phase encoder (AYAB: ENC_PIN_C)
 
 #define EOL_R_PIN             A0       // End Of Line Right
 #define EOL_L_PIN             A1       // End Of Line Left
@@ -34,8 +34,8 @@
 #define GO_RIGHT              0        //
 #define GO_LEFT               1        //
 
-#define CHUNK_1_8             0
-#define CHUNK_9_16            1
+#define CHUNK_0_7             0
+#define CHUNK_8_15            1
 
 #define HEADER                64       //
 #define FOOTER                255      //
@@ -64,8 +64,8 @@ int16_t stitchPos = 0;                    // Carriage stitch position
 uint8_t phaseEncoderCount = 0;            //
 uint8_t solenoidesPos = 0;                //
 
-boolean update_solenoides = false;         //
 uint8_t update_solenoides_chunc = 0;
+boolean write_solenoides = false;         //
 
 unsigned long int bip_timer = 0;
 
@@ -82,6 +82,7 @@ void setup() {
   pinMode(ENC_PIN_3, INPUT_PULLUP);
 
   attachInterrupt(0, stitches_ISR, RISING); // Interrupt 0 is associated to digital pin 2 (stitches encoder)
+  //attachInterrupt(0, stitches_ISR, CHANGE); // Interrupt 0 is associated to digital pin 2 (stitches encoder)
 
   pinMode(PIEZO_PIN, OUTPUT);
   digitalWrite(PIEZO_PIN, HIGH);
@@ -188,66 +189,51 @@ void serialEvent() {
 
 void stitches_ISR() {
   cariageDir = digitalRead(DIR_ENC_PIN);
-  phaseEncoderState = digitalRead(ENC_PIN_3);
+  //phaseEncoderState = digitalRead(ENC_PIN_3);
   if (startLeft || startRight) {
-    updatephaseEncoderPos();
     updateStitchPos();
-#ifdef DEBUG
-    debug_print = true;
-#endif
   }
-}
-
-inline void updatephaseEncoderPos() {
-  switch (cariageDir) {
-    case GO_LEFT: // Carriage go LEFT to RIGHT
-      if (!lastPhaseEncoderState && phaseEncoderState) { // Rising
-        phaseEncoderCount++;
-        update_solenoides_chunc = CHUNK_9_16;
-        update_solenoides = true;
-      }
-      else if (lastPhaseEncoderState && !phaseEncoderState) { // Falling
-        phaseEncoderCount++;
-        update_solenoides_chunc = CHUNK_1_8;
-        update_solenoides = true;
-      }
-      break;
-    case GO_RIGHT: // Carriage go RIHT to LEFT
-      if (!lastPhaseEncoderState && phaseEncoderState) { // Rising
-        phaseEncoderCount--;
-        update_solenoides_chunc = CHUNK_1_8;
-        update_solenoides = true;
-      }
-      else if (lastPhaseEncoderState && !phaseEncoderState) { // Falling
-        phaseEncoderCount--;
-        update_solenoides_chunc = CHUNK_9_16;
-        update_solenoides = true;
-      }
-      break;
-  }
-  lastPhaseEncoderState = phaseEncoderState;
 }
 
 inline void updateStitchPos() {
   switch (cariageDir) {
-    case GO_LEFT: // Carriage go LEFT to RIGHT
-      //if (stitchPos < STITCHE_START_R) stitchPos++; // Increase stitch count
-      stitchPos++; // Increase stitch count
-      //solenoidesPos = ((stitchPos + 4) % 8);
-      solenoidesPos = (stitchPos % 8);
-      break;
     case GO_RIGHT: // Carriage go RIHT to LEFT
       //if (stitchPos > STITCHE_START_L) stitchPos--; // Decrease stitch count
       stitchPos--; // Decrease stitch count
-      solenoidesPos = (stitchPos % 8);
+      solenoidesPos = (stitchPos % 16);
+      if (solenoidesPos == 15) {
+        phaseEncoderCount--;
+        update_solenoides_chunc = CHUNK_0_7;
+        write_solenoides = true;
+      }
+      else if (solenoidesPos == 8) {
+        phaseEncoderCount--;
+        update_solenoides_chunc = CHUNK_8_15;
+        write_solenoides = true;
+      }
+      break;
+    case GO_LEFT: // Carriage go LEFT to RIGHT
+      //if (stitchPos < STITCHE_START_R) stitchPos++; // Increase stitch count
+      stitchPos++; // Increase stitch count
+      solenoidesPos = (stitchPos % 16);
+      if (solenoidesPos == 0) {
+        phaseEncoderCount++;
+        update_solenoides_chunc = CHUNK_8_15;
+        write_solenoides = true;
+      }
+      else if (solenoidesPos == 8) {
+        phaseEncoderCount++;
+        update_solenoides_chunc = CHUNK_0_7;
+        write_solenoides = true;
+      }
       break;
   }
 }
 
 inline void writeSolenoides() {
-  if (update_solenoides) {
+  if (write_solenoides) {
     switch (update_solenoides_chunc) {
-      case CHUNK_1_8:
+      case CHUNK_0_7:
         Wire.beginTransmission(I2C_ADDR_SOL_1_8);
         Wire.write(stitchBin[phaseEncoderCount]);
 #ifdef DEBUG
@@ -256,7 +242,7 @@ inline void writeSolenoides() {
         Serial.print(stitchBin[phaseEncoderCount], BIN);
 #endif
         break;
-      case CHUNK_9_16: // Carriage go RIHT to LEFT
+      case CHUNK_8_15: // Carriage go RIHT to LEFT
         Wire.beginTransmission(I2C_ADDR_SOL_9_16);
         Wire.write(stitchBin[phaseEncoderCount]);
 #ifdef DEBUG
