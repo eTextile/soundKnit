@@ -13,30 +13,34 @@
 #define PHASE_ENCODER_MAX     24       //
 #define STITCHES_BYTES        25       // 25 x 8 = 200
 
-//#define STITCHES_PIN        A4       // I2C hardhare / Connected to the IO expander
-//#define CLOCK_PIN           A5       // I2C hardhare / Connected to the IO expander
-
 // HARDWARE INPUT SYSTEM
 #define ENC_PIN_1             2        // Encoder 1 - stitches encoder (interrupt driven) 
 #define DIR_ENC_PIN           3        // Encoder 2 - cariageDir encoder
 #define ENC_PIN_3             4        // Encoder 3 - phase encoder
-#define EOL_R_PIN             A0       // End Of Line Right for analog in
-#define EOL_L_PIN             A1       // end Of Line Left for analog in
+
+#define EOL_R_PIN             A0       // End Of Line Right
+#define EOL_L_PIN             A1       // End Of Line Left
+
 #define PIEZO_PIN             9        // Not used
 #define I2C_ADDR_SOL_1_8      0x20     // IO expander chip addres
 #define I2C_ADDR_SOL_9_16     0x21     // IO expander chip addres
 
 // SOFTWARE CONSTANTS
-#define THRESHOLD             500      // End lines sensors threshold
+#define THRESHOLD             400      // End lines sensors threshold
 
-#define STITCHE_START_L       1        // 1
-#define STITCHE_START_R       201      // 199
+#define STITCHE_START_L       -1       // 1
+#define STITCHE_START_R       200      // 199
 
-#define RIGHT_LEFT            0        //
-#define LEFT_RIGHT            1        //
+#define GO_RIGHT              0        //
+#define GO_LEFT               1        //
+
+#define CHUNK_1_8             0
+#define CHUNK_9_16            1
 
 #define HEADER                64       //
 #define FOOTER                255      //
+
+#define BIP_TIME              100
 
 boolean phaseEncoderState = false;     // Phase encoder state
 boolean lastPhaseEncoderState = false; // Phase encoder last state
@@ -59,9 +63,15 @@ uint8_t byte_index = 0;                   // Index for incomming serial bytes
 int16_t stitchPos = 0;                    // Carriage stitch position
 uint8_t phaseEncoderCount = 0;            //
 uint8_t solenoidesPos = 0;                //
-boolean updateSolenoides = false;         //
 
-#define  DEBUG;                           // serial DEBUGING
+boolean update_solenoides = false;         //
+uint8_t update_solenoides_chunc = 0;
+
+unsigned long int bip_timer = 0;
+
+boolean debug_print = false;
+
+//#define  DEBUG;                           // serial DEBUGING
 
 ////////////////////////////////////////////////////////////////////////////////
 void setup() {
@@ -70,13 +80,16 @@ void setup() {
   pinMode(ENC_PIN_1, INPUT_PULLUP);
   pinMode(DIR_ENC_PIN, INPUT_PULLUP);
   pinMode(ENC_PIN_3, INPUT_PULLUP);
+
   attachInterrupt(0, stitches_ISR, RISING); // Interrupt 0 is associated to digital pin 2 (stitches encoder)
+
   pinMode(PIEZO_PIN, OUTPUT);
+  digitalWrite(PIEZO_PIN, HIGH);
 }
 
 void loop() {
   switch (cariageDir) {
-    case LEFT_RIGHT: // Carriage go LEFT to RIGHT
+    case GO_LEFT: // Carriage go LEFT to RIGHT
       // Test if LEFT end ligne sensor is passed
       // if passed ...
       if (analogRead(EOL_L_PIN) > THRESHOLD && toggel_left == true) {
@@ -84,59 +97,65 @@ void loop() {
         startLeft = true;
         stitchPos = STITCHE_START_L; // Set the stitch count to the left start position
         phaseEncoderCount = PHASE_ENCODER_MIN;
-        blip();
-        #ifdef DEBUG
-          Serial.println();
-          Serial.print("LEFT / START / stitchPos: " + stitchPos);
-        #endif
+        bip_timer = millis();
+#ifdef DEBUG
+        Serial.println();
+        Serial.print("LEFT / START / stitchPos: ");
+        Serial.print(stitchPos);
+#endif
       }
       // Test if RIGHT end ligne sensor is passed
       // If passed then ask to the computer to send the next array of values
-      if (analogRead(EOL_R_PIN) > THRESHOLD && toggel_right == true) {
+      if (analogRead(EOL_R_PIN) < THRESHOLD && toggel_right == true) {
         toggel_right = false;
         startLeft = false;
         byte_index = 0;
-        blip();
-        #ifdef DEBUG
-          Serial.println();
-          Serial.print("RIGHT / STOP / stitchPos: " + stitchPos);
-        #else
-          Serial.write(HEADER); // Data request!
-        #endif
+        bip_timer = millis();
+#ifdef DEBUG
+        Serial.println();
+        Serial.print("RIGHT / STOP / stitchPos: ");
+        Serial.print(stitchPos);
+#else
+        Serial.write(HEADER); // Data request!
+#endif
       }
       break;
-    case RIGHT_LEFT: // Carriage go RIGHT to LEFT
+
+    case GO_RIGHT: // Carriage go RIGHT to LEFT
       // Test if the RIGHT end ligne sensor is passed
-      // if passed set all default values 
-      if (analogRead(EOL_R_PIN) > THRESHOLD && toggel_right == false) {
+      // If passed set all default values
+      if (analogRead(EOL_R_PIN) < THRESHOLD && toggel_right == false) {
         toggel_right = true;
         startRight = true;
         stitchPos = STITCHE_START_R; // Set the stitch count to the right start position
         phaseEncoderCount = PHASE_ENCODER_MAX;
-        blip();
-        #ifdef DEBUG
-          Serial.println();
-          Serial.print("RIGHT / START / stitchPos: " + stitchPos);
-        #endif
+        bip_timer = millis();
+#ifdef DEBUG
+        Serial.println();
+        Serial.print("RIGHT / START / stitchPos: ");
+        Serial.print(stitchPos);
+#endif
       }
       // Test if the LEFT end ligne sensor is passed
-      // if passed then ask to the computer to send the next array of values
+      // If passed then ask to the computer to send the next array of values
       if (analogRead(EOL_L_PIN) > THRESHOLD && toggel_left == false) {
         toggel_left = true;
         startRight = false;
         byte_index = 0;
-        blip();
-        #ifdef DEBUG
-          Serial.println();
-          Serial.print("LEFT / STOP / stitchPos: " + stitchPos);
-        #else
-          Serial.write(HEADER); // Data request!
-        #endif
+        bip_timer = millis();
+#ifdef DEBUG
+        Serial.println();
+        Serial.print("LEFT / STOP / stitchPos: ");
+        Serial.print(stitchPos);
+#else
+        Serial.write(HEADER); // Data request!
+#endif
       }
       break;
   }
-
   writeSolenoides();
+  make_bip();
+  printOut();
 }
 
 //////////////////////////////////////////////////////
@@ -169,105 +188,107 @@ void serialEvent() {
 
 void stitches_ISR() {
   cariageDir = digitalRead(DIR_ENC_PIN);
-  lastPhaseEncoderState = phaseEncoderState;
   phaseEncoderState = digitalRead(ENC_PIN_3);
   if (startLeft || startRight) {
     updatephaseEncoderPos();
     updateStitchPos();
-    updateSolenoides = true;
-    #ifdef DEBUG
-      printOut();
-    #endif
+#ifdef DEBUG
+    debug_print = true;
+#endif
   }
 }
 
 inline void updatephaseEncoderPos() {
-  if (phaseEncoderState != lastPhaseEncoderState) {
-    switch (cariageDir) {
-      case LEFT_RIGHT: // Carriage go LEFT to RIGHT
-        if (phaseEncoderCount < PHASE_ENCODER_MAX) phaseEncoderCount++;
-        break;
-      case RIGHT_LEFT: // Carriage go RIHT to LEFT
-        if (phaseEncoderCount > PHASE_ENCODER_MIN) phaseEncoderCount--;
-        break;
-    }
+  switch (cariageDir) {
+    case GO_LEFT: // Carriage go LEFT to RIGHT
+      if (!lastPhaseEncoderState && phaseEncoderState) { // Rising
+        phaseEncoderCount++;
+        update_solenoides_chunc = CHUNK_9_16;
+        update_solenoides = true;
+      }
+      else if (lastPhaseEncoderState && !phaseEncoderState) { // Falling
+        phaseEncoderCount++;
+        update_solenoides_chunc = CHUNK_1_8;
+        update_solenoides = true;
+      }
+      break;
+    case GO_RIGHT: // Carriage go RIHT to LEFT
+      if (!lastPhaseEncoderState && phaseEncoderState) { // Rising
+        phaseEncoderCount--;
+        update_solenoides_chunc = CHUNK_1_8;
+        update_solenoides = true;
+      }
+      else if (lastPhaseEncoderState && !phaseEncoderState) { // Falling
+        phaseEncoderCount--;
+        update_solenoides_chunc = CHUNK_9_16;
+        update_solenoides = true;
+      }
+      break;
   }
+  lastPhaseEncoderState = phaseEncoderState;
 }
 
 inline void updateStitchPos() {
   switch (cariageDir) {
-    case LEFT_RIGHT: // Carriage go LEFT to RIGHT
-      if (stitchPos < STITCHE_START_R) stitchPos++; // Increase stitch count
+    case GO_LEFT: // Carriage go LEFT to RIGHT
+      //if (stitchPos < STITCHE_START_R) stitchPos++; // Increase stitch count
+      stitchPos++; // Increase stitch count
+      //solenoidesPos = ((stitchPos + 4) % 8);
+      solenoidesPos = (stitchPos % 8);
       break;
-    case RIGHT_LEFT: // Carriage go RIHT to LEFT
-      if (stitchPos > STITCHE_START_L) stitchPos--; // Decrease stitch count
+    case GO_RIGHT: // Carriage go RIHT to LEFT
+      //if (stitchPos > STITCHE_START_L) stitchPos--; // Decrease stitch count
+      stitchPos--; // Decrease stitch count
+      solenoidesPos = (stitchPos % 8);
       break;
   }
-  solenoidesPos = (stitchPos % 8);
 }
 
 inline void writeSolenoides() {
-  if (updateSolenoides) {
-    updateSolenoides = false;
-    switch (cariageDir) {
-    case LEFT_RIGHT: // Carriage go LEFT to RIGHT
-      if (solenoidesPos == 0){
-        if (!phaseEncoderState) {
-          Wire.beginTransmission(I2C_ADDR_SOL_1_8);
-          Wire.write(stitchBin[phaseEncoderCount]);
-          #ifdef DEBUG
-            Serial.println();
-            Serial.print("WRITE_1_8: " + stitchBin[phaseEncoderCount]);
-          #endif
-        }
-        else {
-          Wire.beginTransmission(I2C_ADDR_SOL_9_16);
-          Wire.write(stitchBin[phaseEncoderCount]);
-          #ifdef DEBUG
-            Serial.println();
-            Serial.print("WRITE_9_16: " + stitchBin[phaseEncoderCount]);
-          #endif
-        }
-        Wire.endTransmission();
-      }     
-      break;
-    
-    case RIGHT_LEFT: // Carriage go RIHT to LEFT
-      if (solenoidesPos == 0){
-        if (!phaseEncoderState) {
-          Wire.beginTransmission(I2C_ADDR_SOL_9_16);
-          Wire.write(stitchBin[phaseEncoderCount]);
-          #ifdef DEBUG
-            Serial.println();
-            Serial.print("WRITE_9_16: " + stitchBin[phaseEncoderCount]);
-          #endif
-        } else {
-          Wire.beginTransmission(I2C_ADDR_SOL_1_8);
-          Wire.write(stitchBin[phaseEncoderCount]);
-          #ifdef DEBUG
-            Serial.println();
-            Serial.print("WRITE_1_8: " + stitchBin[phaseEncoderCount]);
-          #endif
-        }
-        Wire.endTransmission();
-      }
-      break;
+  if (update_solenoides) {
+    switch (update_solenoides_chunc) {
+      case CHUNK_1_8:
+        Wire.beginTransmission(I2C_ADDR_SOL_1_8);
+        Wire.write(stitchBin[phaseEncoderCount]);
+#ifdef DEBUG
+        Serial.println();
+        Serial.print("WRITE_1_8: ");
+        Serial.print(stitchBin[phaseEncoderCount], BIN);
+#endif
+        break;
+      case CHUNK_9_16: // Carriage go RIHT to LEFT
+        Wire.beginTransmission(I2C_ADDR_SOL_9_16);
+        Wire.write(stitchBin[phaseEncoderCount]);
+#ifdef DEBUG
+        Serial.println();
+        Serial.print("WRITE_9_16: ");
+        Serial.print(stitchBin[phaseEncoderCount], BIN);
+#endif
+        break;
     }
   }
 }
 
 // Print out DEBUGING values
 inline void printOut() {
-  Serial.println();
-  Serial.print("CariageDir: " + cariageDir);
-  Serial.print(" PhaseEncoderState: " + phaseEncoderState);
-  Serial.print(" PhaseEncoderCount: " + phaseEncoderCount);
-  Serial.print(" StitchPos: " + stitchPos);
-  Serial.print(" SolenoidesPos: " + solenoidesPos);
+#ifdef DEBUG
+  if (debug_print) {
+    debug_print = false;
+    Serial.println();
+    Serial.print(F("CariageDir: ")), Serial.print(cariageDir);
+    Serial.print(F(" PE_State: ")), Serial.print(phaseEncoderState);
+    Serial.print(F(" PE_Count: ")), Serial.print(phaseEncoderCount);
+    Serial.print(F(" StitchPos: ")), Serial.print(stitchPos);
+    Serial.print(F(" SolenoidesPos: ")), Serial.print(solenoidesPos);
+  }
+#endif
 }
 
-inline void blip(){
-  digitalWrite(PIEZO_PIN, HIGH);
-  delay(30);
-  digitalWrite(PIEZO_PIN, LOW);
+inline void make_bip() {
+  if (millis() - bip_timer < BIP_TIME) {
+    digitalWrite(PIEZO_PIN, LOW);
+  }
+  if (millis() - bip_timer > BIP_TIME) {
+    digitalWrite(PIEZO_PIN, HIGH);
+  }
 }
