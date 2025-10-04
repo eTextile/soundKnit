@@ -13,10 +13,10 @@ final String PORTNAME = "/dev/ttyACM0"; // Select your port number
 
 final int BAUDERATE   = 115200;         // Serial port speed
 final byte HEADER     = byte(64);       // Header recived evrey knetted row
-final byte FOOTER     = byte(255);      // Footer to terminate the list of pixels to knit
+final byte FOOTER     = byte(33);      // Footer to terminate the list of pixels to knit
 
 final int STITCHES    = 200;            //
-final int STITCHES_BYTES = 25;          // 25 x 8 = 200
+//final int STITCHES_BYTES = 25;          // 25 x 8 = 200
 
 final int BLACK       = -1;             //
 final int WHITE       = -16777216;      //
@@ -47,16 +47,13 @@ PImage raw_image;                       // Loded image
 
 byte[]image_bin_array = {0};
 
-//int nx = 10;
-//int ny = 10;
-
 PFont font;
 
 int line_index = 0;                      // Store the current row to knitt
 int selected_pattern = 4;
 boolean update_frame = false;
 
-final boolean COMPORT = false;           // Set it true to connect your knitter
+final boolean COMPORT = true;           // Set it true to connect your knitter
 final boolean DEBUG   = true;           //
 
 void setup() {
@@ -85,7 +82,7 @@ void setup() {
   // If the loaded image is less than 200 pixel (max size)
   // Set the pattern in the middle of the knitting machine
   IMAGE_PIXEL_OFFSET = int(( STITCHES - image_w ) / 2);
-  line_index = round(image_h / 2);
+  line_index = image_h;
 
   pattern_layers = new byte[LAYERS][image_bin_array_size];
   patterns_generator(pattern_layers, raw_image);
@@ -144,6 +141,7 @@ void serial_buffer_write(byte[]bin_array_ptr, int line_index_ptr) {
     if (COMPORT) myPort.write(bin_array_ptr[byte_index]);
     if (DEBUG) print(bin_array_ptr[byte_index]);
   }
+  delay(20);
   if (COMPORT) myPort.write(FOOTER);
   if (DEBUG) println("FOOTER: " + FOOTER); // Print out: -1 ?
 }

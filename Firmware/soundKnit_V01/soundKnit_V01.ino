@@ -34,11 +34,11 @@
 #define EOL_THRESHOLD_L 200  // End of lines sensors threshold value
 
 #define HEADER 64
-#define FOOTER 255
+#define FOOTER 33
 
-#define BIP_TIME 130
+#define BIP_TIME 80
 
-const uint8_t reverse[256] = {
+const uint8_t reverse[256] PROGMEM = {
   0x00, 0x80, 0x40, 0xC0, 0x20, 0xA0, 0x60, 0xE0, 0x10, 0x90, 0x50, 0xD0, 0x30, 0xB0, 0x70, 0xF0,
   0x08, 0x88, 0x48, 0xC8, 0x28, 0xA8, 0x68, 0xE8, 0x18, 0x98, 0x58, 0xD8, 0x38, 0xB8, 0x78, 0xF8,
   0x04, 0x84, 0x44, 0xC4, 0x24, 0xA4, 0x64, 0xE4, 0x14, 0x94, 0x54, 0xD4, 0x34, 0xB4, 0x74, 0xF4,
@@ -110,7 +110,8 @@ void setup() {
   pinMode(DIR_ENC_PIN, INPUT_PULLUP);
   pinMode(PHASE_ENC_PIN, INPUT_PULLUP);
 
-  attachInterrupt(0, stitches_ISR, RISING);  // Interrupt 0 is associated to digital pin 2 (stitches encoder)
+  // THIS SHOULD BE ON ENCODERS !?
+  attachInterrupt(digitalPinToInterrupt(STITCHE_ENC_PIN), stitches_ISR, RISING);  // Interrupt 0 is associated to digital pin 2 (stitches encoder)
 
   pinMode(LED_PIN_A, OUTPUT);
   pinMode(LED_PIN_B, OUTPUT);
@@ -139,10 +140,11 @@ void serialEvent() {
   if (Serial.available() > 0) {
     uint8_t input_value = Serial.read();
     if (input_value != FOOTER) {
-      serial_data[serial_byte_index] = input_value;
-      serial_byte_index++;
+      if(serial_byte_index < STITCHES) {
+        serial_data[serial_byte_index] = input_value;
+        serial_byte_index++;
+      }
     } else {
-
       // Center the recived image in the stitch_bit_array[200]
       uint8_t stitch_byte_offset = (uint8_t)((STITCHES - serial_byte_index) / 2);
       for (uint8_t byte_index = 0; byte_index < serial_byte_index; byte_index++) {
@@ -161,7 +163,7 @@ void serialEvent() {
         }
         if (stitch_bit_index == 7) stitch_byte_index++;
       }
-
+      
       serial_byte_index = 0;
       led_state_A = !led_state_A;
       digitalWrite(LED_PIN_A, led_state_A);
