@@ -3,21 +3,25 @@
  2022 (c) maurin.box@gmail.com
  Used hardwear : AYAB shield V1.0 https://github.com/AllYarnsAreBeautiful/ayab-hardware
  This sketch read and knitt images
- The images must not be wider than 200 pixels
+ The loded image must not be wider than 200 pixels
  */
 
 import processing.serial.*;
 
 Serial myPort;                          // Create object from Serial class
-final String PORTNAME = "/dev/ttyUSB0"; // Select your port number
+final String PORTNAME = "/dev/ttyACM0"; // Select your port number
 
 final int BAUDERATE   = 115200;         // Serial port speed
-final int HEADER      = 64;             // Header recived evrey knetted row
-final int FOOTER      = 255;            // Footer to terminate the list of pixels to knit
+final byte HEADER     = byte(64);       // Header recived evrey knetted row
+final byte FOOTER     = byte(255);      // Footer to terminate the list of pixels to knit
+
 final int STITCHES    = 200;            //
+final int STITCHES_BYTES = 25;          // 25 x 8 = 200
+
 final int BLACK       = -1;             //
 final int WHITE       = -16777216;      //
-final int LAYERS      = 16;             //
+
+final int LAYERS      = 5;              //
 final int CANVAS_W    = 800;            //
 final int CANVAS_H    = 800;            //
 
@@ -25,143 +29,140 @@ float PADDING = 20;                     // Left & Right space around the image
 float PADDING_SIZE = 0;                 //
 float PIXEL_SIZE = 0;                   //
 
-int IMAGE_W = 0;                        // The image width in pixel
-int IMAGE_H = 0;                        // The image height in pixel
-int IMAGE_SIZE = 0;                     // The image size in pixel
-int IMAGE_OFFSET = 0;                   // Space to display the image in the middle of the canvas
+int image_w = 0;                        // The image width in pixel
+int image_h = 0;                        // The image height in pixel
+int IMAGE_PIXEL_OFFSET = 0;             // Space to display the image in the middle of the canvas
+
+int image_bin_array_size = 0;           // The raw image size in pixel
 
 int BUTTON_COLS = 8;
 int BUTTON_ROWS = 8;
 int BUTTON_SIZE = 15;
 Button buttons[][];
 
-final boolean COMPORT = false;          // Set it true to connect your knitter
-final boolean DEBUG   = false;          //
-
 char inputChar;                         // Variable to store incoming data
+byte[][]pattern_layers;                 //
 
-PImage rawImage;                        // Loded image
-byte[]binArray;
-byte[][]patternLayers;
-byte[] serialData;
+PImage raw_image;                       // Loded image
+
+byte[]image_bin_array = {0};
+
 int nx = 10;
 int ny = 10;
 
 PFont font;
-int lineIndex = 0;                      // Store the current row to knitt
-byte pixelState = 0;                    // Store the pixel binary state
-int selectedPattern = 5;
-boolean updateFrame = false;
+
+int line_index = 0;                      // Store the current row to knitt
+int selected_pattern = 4;
+boolean update_frame = false;
+
+final boolean COMPORT = false;           // Set it true to connect your knitter
+final boolean DEBUG   = true;           //
 
 void setup() {
   size(1000, 600);
   //font = createFont("Georgia", 40);
   //textFont(font);
-  rawImage = loadImage("../pictures/petit_jabron.png");
+  //raw_image = loadImage("../pictures/petit_jabron.png");
+  raw_image = loadImage("../pictures/damier.png");
+  //raw_image = loadImage("../pictures/interdit.png");
+
   // Scan all pixels from the imported picture
-  rawImage.loadPixels();
-  IMAGE_W = rawImage.width;
-  if (IMAGE_W > STITCHES) error("IMAGE_WIDTH_TO_LARGE");
-  IMAGE_H = rawImage.height;
-  IMAGE_SIZE = IMAGE_W * IMAGE_H;
-  binArray = new byte[IMAGE_SIZE];
-  getPixels(binArray, rawImage);
+  raw_image.loadPixels();
+  image_w = raw_image.width;
+  println("IMAGE_WIDTH: " + image_w);
+  if (image_w > STITCHES) error("IMAGE_WIDTH_TO_LARGE");
+
+  image_h = raw_image.height;
+  image_bin_array_size = image_w * image_h;
+  image_bin_array = new byte[image_bin_array_size];
+
+  generate_image_bin_array(image_bin_array, raw_image); // Populate the bin array from image pixels
+
   PIXEL_SIZE = width / ((PADDING * 2) + STITCHES);
   PADDING_SIZE = PADDING * PIXEL_SIZE;
+  
   // If the loaded image is less than 200 pixel (max size)
   // Set the pattern in the middle of the knitting machine
-  IMAGE_OFFSET = int(( STITCHES - IMAGE_W ) / 2);
-  lineIndex = round(IMAGE_H / 2);
-  patternLayers = new byte[LAYERS][IMAGE_SIZE];
-  patternsGenerator(patternLayers, IMAGE_W, IMAGE_H);
-  
+  IMAGE_PIXEL_OFFSET = int(( STITCHES - image_w ) / 2);
+  line_index = round(image_h / 2);
+
+  pattern_layers = new byte[LAYERS][image_bin_array_size];
+  patterns_generator(pattern_layers, raw_image);
+
   if (COMPORT) myPort = new Serial(this, PORTNAME, BAUDERATE);
 
-  displayGrid(lineIndex);
-  displayPicture(lineIndex);
-  displayLineIndex(lineIndex);
-  displayReadLine();
+  display_grid(line_index);
+  display_picture(line_index);
+  display_line_index(line_index);
+  display_read_line();
 
-  serialData = new byte[STITCHES];
-  if (DEBUG) println("IMAGE_WIDTH: " + IMAGE_W);
-  if (DEBUG) println("IMAGE_OFFSET: " + IMAGE_OFFSET);
+  if (DEBUG) println("IMAGE_PIXEL_OFFSET: " + IMAGE_PIXEL_OFFSET);
   if (DEBUG) println("PIXEL_SIZE: " + PIXEL_SIZE);
   if (DEBUG) println("PADDING_SIZE: " + PADDING_SIZE);
-  if (DEBUG) println("LINE_INDEX: " + lineIndex);
-  
-   buttons = new Button[BUTTON_ROWS][BUTTON_COLS];   // buttons array 
+  if (DEBUG) println("LINE_INDEX: " + line_index);
+
+  /*
+  buttons = new Button[BUTTON_ROWS][BUTTON_COLS];   // buttons array
 
   for ( int i=0; i<BUTTON_ROWS; i++ ) {
     for ( int j=0; j<BUTTON_COLS; j++ ) {
       buttons[i][j] = new Button( );  // fill the array with buttons
     }
   }
-
+  */
 }
 
+/////////////////////////////////////////// LOOP
 void draw() {
   if (COMPORT) {
     while (myPort.available () > 0) {
       inputChar = myPort.readChar();
-      if (inputChar == HEADER && updateFrame == false) {
-        lineIndex--;
-        println("LINE_INDEX :" + lineIndex);
-        if (lineIndex <= BLACK) {
-          lineIndex = 0;
-        } else {
-          updateFrame = true;
-        }
+      if (inputChar == HEADER && update_frame == false) {
+        line_index--;
+        if (line_index < 0) line_index = 0;
+        println("LINE_INDEX :" + line_index);
+        update_frame = true;
       }
     }
   }
-  if (updateFrame == true) {
-    updateFrame = false;
-    displayGrid(lineIndex);
-    displayPicture(lineIndex);
-    displayLineIndex(lineIndex);
-    displayReadLine();
-    serialBuffer_clear();
-    serialBuffer_fill();
-    serialBuffer_write();
+  if (update_frame == true) {
+    update_frame = false;
+    display_grid(line_index);
+    display_picture(line_index);
+    display_line_index(line_index);
+    display_read_line();
+    serial_buffer_write(image_bin_array, line_index);
   }
 }
 
-void serialBuffer_clear() {
-  for (int i = 0; i<STITCHES; i++) {
-    serialData[i] = 0;
-  }
-}
+void serial_buffer_write(byte[]bin_array_ptr, int line_index_ptr) {
 
-void serialBuffer_fill() {
-  for (int i=0; i<IMAGE_W; i++) {
-    serialData[i] = binArray[lineIndex * IMAGE_W + i];
-  }
-}
+  int pixel_index_start = line_index_ptr * image_w;
 
-void serialBuffer_write() {
-  for (int i=0; i<STITCHES; i++) {
-    if (COMPORT) myPort.write(serialData[i]);
-    if (DEBUG) print(serialData[i]);
+  for (int byte_index=pixel_index_start; byte_index<(pixel_index_start + image_w); byte_index++) {
+    if (COMPORT) myPort.write(bin_array_ptr[byte_index]);
+    if (DEBUG) print(bin_array_ptr[byte_index]);
   }
   if (COMPORT) myPort.write(FOOTER);
-  if (DEBUG) println(FOOTER);
+  if (DEBUG) println("FOOTER: " + FOOTER); // Print out: -1 ?
 }
 
-void displayLineIndex(int index) {
+void display_line_index(int index) {
   fill(255, 0, 0);
   text(index, 30, height/2 - 10);
 }
 
-void displayGrid(int verticalPos) {
+void display_grid(int vertical_pos) {
   background(255);     // Clear trails
   strokeWeight(0.5);   //
   stroke(0);           // Black lines
   fill(255);
-  for (int rowPos=0; rowPos<IMAGE_H; rowPos++) {
-    for (int colPos=0; colPos<STITCHES; colPos++) {
+  for (int row_pos=0; row_pos<image_h; row_pos++) {
+    for (int col_pos=0; col_pos<STITCHES; col_pos++) {
       rect(
-        (colPos * PIXEL_SIZE) + PADDING_SIZE,
-        (rowPos * PIXEL_SIZE) + height/2 - (verticalPos * PIXEL_SIZE),
+        (col_pos * PIXEL_SIZE) + PADDING_SIZE,
+        (row_pos * PIXEL_SIZE) + height/2 - (vertical_pos * PIXEL_SIZE),
         PIXEL_SIZE,
         PIXEL_SIZE
         );
@@ -170,19 +171,21 @@ void displayGrid(int verticalPos) {
 }
 
 // Display all pixels
-void displayPicture(int verticalPos) {
-  strokeWeight(0.5);   //
+void display_picture(int vertical_pos) {
+  strokeWeight(0.5);   // 
   stroke(0);           // Black lines
   fill(0);
-  for (int rowPos=0; rowPos<IMAGE_H; rowPos++) {
-    int rowPixIndex = rowPos * IMAGE_W;
-    for (int colPos=0; colPos<IMAGE_W; colPos++) {
-      int pixelIndex = rowPixIndex + colPos;
-      if (binArray[pixelIndex] == 0) {
-        // Default rectMode is CORNER
+
+  for (int row_pos=0; row_pos<image_h; row_pos++) {
+    int row_pixel_index = row_pos * image_w;
+
+    for (int col_pos=0; col_pos<image_w; col_pos++) {
+      int pixel_index = row_pixel_index + col_pos;
+
+      if (image_bin_array[pixel_index] == 0) {
         rect(
-          (colPos * PIXEL_SIZE) + PADDING_SIZE + (IMAGE_OFFSET * PIXEL_SIZE),
-          (rowPos * PIXEL_SIZE) + height/2 - (verticalPos * PIXEL_SIZE),
+          (col_pos * PIXEL_SIZE) + PADDING_SIZE + (IMAGE_PIXEL_OFFSET * PIXEL_SIZE),
+          (row_pos * PIXEL_SIZE) + height/2 - (vertical_pos * PIXEL_SIZE),
           PIXEL_SIZE,
           PIXEL_SIZE
           );
@@ -192,7 +195,7 @@ void displayPicture(int verticalPos) {
 }
 
 // Draw two red lines to visualise the current frame onto the pattern
-void displayReadLine() {
+void display_read_line() {
   strokeWeight(1.1);
   stroke(255, 0, 0);
   line(0, height/2, width, height/2);
@@ -200,43 +203,51 @@ void displayReadLine() {
 }
 
 void mouseClicked() {
-  //width - IMAGE_W;
-  //height - IMAGE_H;
-  // lineIndex
-  int posX = int (((mouseX - PADDING_SIZE) / PIXEL_SIZE) - IMAGE_OFFSET);
-  int posY = int (((mouseY - height/2 ) / PIXEL_SIZE) + lineIndex);
-  if (DEBUG) println("X: " + posX + " Y: " + posY);
-  floodFill(rawImage, binArray, patternLayers[selectedPattern], posX, posY);
-  displayPicture(lineIndex);
-  displayLineIndex(lineIndex);
-  displayReadLine();
+  int pos_x = int (((mouseX - PADDING_SIZE) / PIXEL_SIZE) - IMAGE_PIXEL_OFFSET);
+  int pos_y = int (((mouseY - height/2 ) / PIXEL_SIZE) + line_index);
+  if (DEBUG) println("X: " + pos_x + " Y: " + pos_y);
+  flood_fill(raw_image, image_bin_array, pattern_layers[selected_pattern], pos_x, pos_y);
+
+  display_picture(line_index);
+  display_line_index(line_index);
+  display_read_line();
 }
 
-void getPixels(byte[] output, PImage input) {
-  for (int rowPos=0; rowPos<IMAGE_H; rowPos++) {
-    int rowPixIndex = rowPos * IMAGE_W;
-    for (int colPos=0; colPos<IMAGE_W; colPos++) {
-      int pixelIndex = rowPixIndex + colPos;
-      if (input.pixels[pixelIndex] == BLACK) {
-        output[pixelIndex] = 1;
+// Place the input image in the middle off the output array
+void generate_image_bin_array(byte[] output, PImage input) {
+  
+  for (int row_pos=0; row_pos<input.height; row_pos++) {
+    int input_row_pixel_index = row_pos * input.width;
+
+    for (int col_pos=0; col_pos<input.width; col_pos++) {
+      int pixel_index = input_row_pixel_index + col_pos;
+
+      if (input.pixels[pixel_index] == BLACK) {
+        output[pixel_index] = byte(1);
       } else {
-        output[pixelIndex] = 0;
+        output[pixel_index] = byte(0);
       }
     }
   }
 }
 
-void patternsGenerator(byte[][] patterns, int patternW, int patternH) {
+// Replace it with live patterns generator !?
+void patterns_generator(byte[][] patterns, PImage input) {
+
   for (int pattern=0; pattern<LAYERS; pattern++) {
-    for (int rowPos=0; rowPos<patternH; rowPos++) {
-      int rowPixIndex = rowPos * patternW;
-      for (int colPos=0; colPos<patternW; colPos++) {
-        int pixelIndex = rowPixIndex + colPos;
-        int backgroundPixel = pixelIndex % (pattern + 2);
-        if (backgroundPixel == 0) {
-          patterns[pattern][pixelIndex] = 1;
+
+    for (int row_pos=0; row_pos<input.height; row_pos++) {
+      int row_pixel_index = row_pos * input.width;
+
+      for (int col_pos=0; col_pos<input.width; col_pos++) {
+        int pixel_index = row_pixel_index + col_pos;
+
+        int background_pixel = pixel_index % (pattern + 2); // ??
+
+        if (background_pixel == 0) {
+          patterns[pattern][pixel_index] = byte(1);
         } else {
-          patterns[pattern][pixelIndex] = 0;
+          patterns[pattern][pixel_index] = byte(0);
         }
       }
     }
@@ -245,35 +256,37 @@ void patternsGenerator(byte[][] patterns, int patternW, int patternH) {
 
 // Use keys to move the pattern and activate DEBUG mode
 void keyPressed() {
+
   if (key == CODED) {
     if (keyCode == DOWN) {
-      if (lineIndex <= 0) {
-        lineIndex = 0;
+      if (line_index <= 0) {
+        line_index = 0;
       } else {
-        lineIndex--;
-        updateFrame = true;
+        line_index--;
+        update_frame = true;
       }
     }
     if (keyCode == UP) {
-      if (lineIndex >= IMAGE_H - 1) {
-        lineIndex = IMAGE_H - 1;
+      if (line_index >= image_h - 1) {
+        line_index = image_h - 1;
       } else {
-        lineIndex++;
-        updateFrame = true;
+        line_index++;
+        update_frame = true;
       }
     }
     if (keyCode == RIGHT) {
-      lineIndex = IMAGE_H - 1;
-      updateFrame = true;
+      line_index = image_h - 1;
+      update_frame = true;
     }
     if (keyCode == LEFT) {
-      lineIndex = 0;
-      updateFrame = true;
+      line_index = 0;
+      update_frame = true;
     }
   }
 }
 
 void error(String msg) {
+
   while (1 > 0) {
     println(msg);
     delay(1000);

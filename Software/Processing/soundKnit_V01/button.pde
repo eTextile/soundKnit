@@ -10,18 +10,18 @@ class Button {
 
   }
 
-  void onClic( int mX, int mY, int pY, int pX ) {
-    if ( mX>pX*size && mX<pX*size+size && mY>pY*size && mY<pY*size+size ) {
+  void onClic( int mX, int mY, int pos_y, int pos_x ) {
+    if ( mX>pos_x*size && mX<pos_x*size+size && mY>pos_y*size && mY<pos_y*size+size ) {
       buttonState =! buttonState;
       //
     }
   }
 
-  void display( int pY, int pX ) {
+  void display( int pos_y, int pos_x ) {
     
     fill( 0 );
-    rect( pX*size, pY*size, size, size, 3 );
+    rect( pos_x*size, pos_y*size, size, size, 3 );
     fill( 255 );
-    text( buttonLabel, pX*size+size/3, pY*size+size/3-3 );
+    text( buttonLabel, pos_x*size+size/3, pos_y*size+size/3-3 );
   }
 }
