@@ -89,9 +89,7 @@ int16_t stitch_pos = NULL;  // Carriage stitch position
 
 bool phase_encoder_state = false;
 bool last_phase_encoder_state = true;
-
 int8_t phase_encoder_pos = 0;  //
-//int8_t solenoide_pos = 0;    //
 
 boolean led_state_A = true;
 boolean led_state_B = false;
@@ -110,7 +108,6 @@ void setup() {
   pinMode(DIR_ENC_PIN, INPUT_PULLUP);
   pinMode(PHASE_ENC_PIN, INPUT_PULLUP);
 
-  // THIS SHOULD BE ON ENCODERS !?
   attachInterrupt(digitalPinToInterrupt(STITCHE_ENC_PIN), stitches_ISR, RISING);  // Interrupt 0 is associated to digital pin 2 (stitches encoder)
 
   pinMode(LED_PIN_A, OUTPUT);
@@ -132,7 +129,6 @@ void loop() {
 #endif
 }
 
-//////////////////////////////////////////////////////
 void serialEvent() {
 
   static uint8_t serial_byte_index = 0;  // Index for serial incomming bytes
@@ -183,7 +179,6 @@ inline void update_knitter() {
         going_right = START;
         stitch_pos = STITCHES_START_L;
         phase_encoder_pos = PHASE_ENCODER_START_L;
-        //bip_timer = millis();
 #ifdef DEBUG
         Serial.println();
         Serial.print(F("LEFT / START / stitch_pos: ")), Serial.print(stitch_pos);
@@ -193,7 +188,6 @@ inline void update_knitter() {
       // If passed: request new row values
       if (analogRead(EOL_R_PIN) < EOL_THRESHOLD_R && going_right == START) {
         going_right = STOP;
-        //bip_timer = millis();
 #ifdef DEBUG
         Serial.println();
         Serial.print(F("RIGHT / STOP / stitch_pos: ")), Serial.print(stitch_pos);
@@ -209,7 +203,6 @@ inline void update_knitter() {
         going_left = START;
         stitch_pos = STITCHES_START_R;
         phase_encoder_pos = PHASE_ENCODER_START_R;
-        //bip_timer = millis();
 #ifdef DEBUG
         Serial.println();
         Serial.print(F("RIGHT / START / stitch_pos: ")), Serial.print(stitch_pos);
@@ -219,7 +212,6 @@ inline void update_knitter() {
       // If passed: request new row values
       if (analogRead(EOL_L_PIN) > EOL_THRESHOLD_L && going_left == START) {
         going_left = STOP;
-        //bip_timer = millis();
 #ifdef DEBUG
         Serial.println();
         Serial.print(F("LEFT / STOP / stitch_pos: ")), Serial.print(stitch_pos);
@@ -240,12 +232,6 @@ void stitches_ISR() {
   }
 
   update_phase_encoder_pos();
-
-  /*
-  if (going_right == START || going_left == START) {
-    update_stitch_pos();
-  }
-  */
 }
 
 inline void update_phase_encoder_pos() {
@@ -258,44 +244,22 @@ inline void update_phase_encoder_pos() {
       if (!last_phase_encoder_state && phase_encoder_state) {  // Rising
         update_solenoides_chunc = CHUNK_0_7;
         phase_encoder_pos++;
-        //print_out = true;
       } else if (last_phase_encoder_state && !phase_encoder_state) {  // Falling
         update_solenoides_chunc = CHUNK_8_15;
         phase_encoder_pos++;
-        //print_out = true;
       }
       break;
     case GOING_LEFT:
       if (!last_phase_encoder_state && phase_encoder_state) {  // Rising
         update_solenoides_chunc = CHUNK_8_15;
         phase_encoder_pos--;
-        //print_out = true;
       } else if (last_phase_encoder_state && !phase_encoder_state) {  // Falling
         update_solenoides_chunc = CHUNK_0_7;
         phase_encoder_pos--;
-        //print_out = true;
       }
       break;
   }
 }
-
-/*
-inline void update_stitch_pos() {
-  switch (cariage_dir) {
-    case GOING_RIGHT:  // Carriage going LEFT to RIGHT
-      if (going_right == START) {
-        stitch_pos++;
-      }
-      break;
-    case GOING_LEFT:  // Carriage going RIGHT to LEFT
-      if (going_left == START) {
-        stitch_pos--;
-      }
-      break;
-  }
-  //print_out = true;
-}
-*/
 
 inline void write_solenoides() {
   switch (update_solenoides_chunc) {
@@ -331,20 +295,6 @@ inline void write_solenoides() {
   }
 }
 
-/*
-// Print out DEBUGING values
-inline void print_all_sensors() {
-  if (print_out) {
-    print_out = false;
-    Serial.println();
-    Serial.print(F("cariage_dir: ")), Serial.print(get_dir_name(cariage_dir));
-    Serial.print(F("\tPE_pos: ")), Serial.print(phase_encoder_pos);
-    Serial.print(F(" ST_pos: ")), Serial.print(stitch_pos);
-    //Serial.print(F(" solenoide_pos: ")), Serial.print(solenoide_pos);
-  }
-}
-*/
-
 inline void make_bip() {
   if (millis() - bip_timer < BIP_TIME) {
     digitalWrite(PIEZO_PIN, LOW);
@@ -352,12 +302,3 @@ inline void make_bip() {
     digitalWrite(PIEZO_PIN, HIGH);
   }
 }
-
-const char* get_dir_name(cariage_status_code_t code) {
-  const char* char_code = NULL;
-  switch (code) {
-    case GOING_RIGHT: char_code = "GOING_RIGHT"; break;
-    case GOING_LEFT: char_code = "GOING_LEFT"; break;
-  }
-  return char_code;
-};
