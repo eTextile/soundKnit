@@ -13,17 +13,16 @@ final String PORTNAME = "/dev/ttyACM0"; // Select your port number
 
 final int BAUDERATE   = 115200;         // Serial port speed
 final byte HEADER     = byte(64);       // Header recived evrey knetted row
-final byte FOOTER     = byte(33);      // Footer to terminate the list of pixels to knit
+final byte FOOTER     = byte(33);       // Footer to terminate the list of pixels to knit
 
 final int STITCHES    = 200;            //
-//final int STITCHES_BYTES = 25;          // 25 x 8 = 200
 
 final int BLACK       = -1;             //
 final int WHITE       = -16777216;      //
 
 final int LAYERS      = 5;              //
-final int CANVAS_W    = 800;            //
-final int CANVAS_H    = 800;            //
+final int CANVAS_W    = 1000;            //
+final int CANVAS_H    = 600;            //
 
 float PADDING = 20;                     // Left & Right space around the image
 float PADDING_SIZE = 0;                 //
@@ -61,8 +60,9 @@ void setup() {
   //font = createFont("Georgia", 40);
   //textFont(font);
   //raw_image = loadImage("../pictures/petit_jabron.png");
-  //raw_image = loadImage("../pictures/damier.png");
-  raw_image = loadImage("../pictures/interdit.png");
+  raw_image = loadImage("../pictures/damier.png");
+  //raw_image = loadImage("../pictures/interdit.png");
+  //raw_image = loadImage("../pictures/stop test 200pix.png");
 
   // Scan all pixels from the imported picture
   raw_image.loadPixels();
@@ -140,8 +140,9 @@ void serial_buffer_write(byte[]bin_array_ptr, int line_index_ptr) {
   for (int byte_index=pixel_index_start; byte_index<(pixel_index_start + image_w); byte_index++) {
     if (COMPORT) myPort.write(bin_array_ptr[byte_index]);
     if (DEBUG) print(bin_array_ptr[byte_index]);
+    delay(2);
   }
-  delay(20);
+  delay(30);
   if (COMPORT) myPort.write(FOOTER);
   if (DEBUG) println("FOOTER: " + FOOTER); // Print out: -1 ?
 }
