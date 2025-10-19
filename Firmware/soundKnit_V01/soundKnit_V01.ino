@@ -69,7 +69,7 @@ typedef enum cariage_status_code_e {
   UNKNOWN
 } cariage_status_code_t;
 
-cariage_status_code_t cariage_dir = UNKNOWN;
+volatile cariage_status_code_t cariage_dir = UNKNOWN;
 
 typedef enum solenoides_status_code_e {
   CHUNK_0_7,
@@ -77,7 +77,7 @@ typedef enum solenoides_status_code_e {
   WRITE_DONE
 } solenoides_status_code_t;
 
-solenoides_status_code_t update_solenoides_chunc = WRITE_DONE;
+volatile solenoides_status_code_t update_solenoides_chunc = WRITE_DONE;
 
 typedef enum eol_status_code_e {
   START,
@@ -91,11 +91,11 @@ uint8_t serial_data[STITCHES] = { 0 };
 uint8_t stitch_bit_array[STITCHES] = { 0 };         // 200 stitchs
 uint8_t stitch_byte_array[STITCHES_BYTES] = { 0 };  // Eight stitchs per byte
 
-int16_t stitch_pos = NULL;  // Carriage stitch position
+//int16_t stitch_pos = NULL;  // Carriage stitch position
 
-bool phase_encoder_state = false;
-bool last_phase_encoder_state = true;
-int8_t phase_encoder_pos = 0;  //
+volatile bool phase_encoder_state = false;
+volatile bool last_phase_encoder_state = true;
+volatile int8_t phase_encoder_pos = 0;
 
 boolean led_state_A = true;
 boolean led_state_B = false;
@@ -113,8 +113,8 @@ void setup() {
   pinMode(DIR_ENC_PIN, INPUT_PULLUP);
   pinMode(PHASE_ENC_PIN, INPUT_PULLUP);
 
-  attachInterrupt(digitalPinToInterrupt(STITCHE_ENC_PIN), stitches_ISR, RISING);  // Interrupt 0 is associated to digital pin 2 (stitches encoder)
-  //attachInterrupt(digitalPinToInterrupt(PHASE_ENC_PIN), stitches_ISR, CHANGE);  // PHASE_ENC_PIN IS NOT AN INTERRUPT PIN!
+  attachInterrupt(digitalPinToInterrupt(STITCHE_ENC_PIN), phase_encoder_ISR, RISING);  // Interrupt 0 is associated to digital pin 2 (stitches encoder)
+  //attachInterrupt(digitalPinToInterrupt(PHASE_ENC_PIN), phase_encoder_ISR, CHANGE);  // PHASE_ENC_PIN IS NOT AN INTERRUPT PIN!
 
   setAnalogReadFreeRunning(true);
   analogReadAsync(EOL_L_PIN, eol_left_read_complete);
@@ -127,6 +127,10 @@ void setup() {
 
   pinMode(PIEZO_PIN, OUTPUT);
   digitalWrite(PIEZO_PIN, HIGH);
+
+  memset(&serial_data[0], 0, STITCHES);
+  memset(&stitch_bit_array[0], 0, STITCHES);
+  memset(&stitch_byte_array[0], 0, STITCHES_BYTES);
 
   for (int i = 0; i < 25; i++) {
     led_state_A = !led_state_A;
@@ -230,12 +234,14 @@ void eol_right_read_complete(uint16_t eol_right_val) {
   interrupts();
 }
 
-void stitches_ISR() {
+void phase_encoder_ISR() {
 
   last_phase_encoder_state = phase_encoder_state;
-  phase_encoder_state = digitalRead(PHASE_ENC_PIN);
+  //phase_encoder_state = digitalRead(PHASE_ENC_PIN);
+  phase_encoder_state = (PIND & _BV(PD4)) != 0;
 
-  if (digitalRead(DIR_ENC_PIN)) {
+  //if (digitalRead(DIR_ENC_PIN)) {
+  if ((PIND & _BV(PD3)) != 0) {
     cariage_dir = GOING_RIGHT;
     if (!last_phase_encoder_state && phase_encoder_state) {  // Rising
       update_solenoides_chunc = CHUNK_0_7;
@@ -247,11 +253,9 @@ void stitches_ISR() {
   } else {
     cariage_dir = GOING_LEFT;
     if (!last_phase_encoder_state && phase_encoder_state) {  // Rising
-      //update_solenoides_chunc = CHUNK_8_15;
       update_solenoides_chunc = CHUNK_0_7;
       phase_encoder_pos--;
     } else if (last_phase_encoder_state && !phase_encoder_state) {  // Falling
-      //update_solenoides_chunc = CHUNK_0_7;
       update_solenoides_chunc = CHUNK_8_15;
       phase_encoder_pos--;
     }
@@ -259,6 +263,7 @@ void stitches_ISR() {
 }
 
 void write_solenoides() {
+
   if (phase_encoder_pos >= 0 && phase_encoder_pos < STITCHES_BYTES) {
     switch (update_solenoides_chunc) {
       case CHUNK_0_7:
