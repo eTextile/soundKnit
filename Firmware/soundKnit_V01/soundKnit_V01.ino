@@ -11,14 +11,14 @@
 #include <analogReadAsync.h>
 
 // HARDWARE CONSTANTS
-#define LED_PIN_A 5        // green LED
-#define LED_PIN_B 6        // yellow LED
+#define LED_PIN_A 5        // Green LED
+#define LED_PIN_B 6        // Yellow LED
 #define PIEZO_PIN 9        //
 #define STITCHE_ENC_PIN 2  // Encoder 1 - stitches encoder (interrupt driven)  (AYAB: ENC_PIN_A)
 #define DIR_ENC_PIN 3      // Encoder 2 - cariage_dir encoder (AYAB : ENC_PIN_B)
 #define PHASE_ENC_PIN 4    // Encoder 3 - phase encoder (AYAB: ENC_PIN_C)
-#define EOL_R_PIN A0       // End Of Line Right
-#define EOL_L_PIN A1       // End Of Line Left
+#define EOL_R_PIN A0       // End of line right
+#define EOL_L_PIN A1       // End of line left
 
 #define I2C_ADDR_SOL_0_7 0x21   // IO expander chip addres
 #define I2C_ADDR_SOL_8_15 0x20  // IO expander chip addres
@@ -28,14 +28,14 @@
 #define STITCHES 200             // Number of stitches
 #define STITCHES_BYTES (25 + 1)  // 25 x 8 = 200 (+1 to avode overflowing)
 
-#define STITCHES_START_L -1
-#define STITCHES_START_R 200
-
 #define PHASE_ENCODER_START_L -3
 #define PHASE_ENCODER_START_R 27
 
-#define EOL_THRESHOLD_R 200  // End of lines sensors threshold value
-#define EOL_THRESHOLD_L 200  // End of lines sensors threshold value
+//#define EOL_THRESHOLD_R 200  // End of lines sensors threshold value - KH910
+//#define EOL_THRESHOLD_L 200  // End of lines sensors threshold value - KH910
+
+#define EOL_THRESHOLD_R 400  // End of lines sensors threshold value - KH930
+#define EOL_THRESHOLD_L 400  // End of lines sensors threshold value - KH930
 
 #define HEADER 64
 #define FOOTER 33
@@ -88,14 +88,18 @@ eol_status_code_t going_right = STOP;
 eol_status_code_t going_left = STOP;
 
 uint8_t serial_data[STITCHES] = { 0 };
-uint8_t stitch_bit_array[STITCHES] = { 0 };         // 200 stitchs
+uint8_t stitch_array[STITCHES] = { 0 };         // 200 stitchs
 uint8_t stitch_byte_array[STITCHES_BYTES] = { 0 };  // Eight stitchs per byte
 
 //int16_t stitch_pos = NULL;  // Carriage stitch position
 
-volatile bool phase_encoder_state = false;
-volatile bool last_phase_encoder_state = true;
-volatile int8_t phase_encoder_pos = 0;
+//volatile bool phase_encoder_state = false;
+//volatile bool last_phase_encoder_state = true;
+//volatile int8_t phase_encoder_pos = 0;
+
+bool phase_encoder_state = false;
+bool last_phase_encoder_state = true;
+int8_t phase_encoder_pos = 0;
 
 boolean led_state_A = true;
 boolean led_state_B = false;
@@ -129,7 +133,7 @@ void setup() {
   digitalWrite(PIEZO_PIN, HIGH);
 
   memset(&serial_data[0], 0, STITCHES);
-  memset(&stitch_bit_array[0], 0, STITCHES);
+  memset(&stitch_array[0], 0, STITCHES);
   memset(&stitch_byte_array[0], 0, STITCHES_BYTES);
 
   for (int i = 0; i < 25; i++) {
@@ -142,8 +146,8 @@ void setup() {
 }
 
 void loop() {
-  write_solenoides();
-  make_bip();
+  //write_solenoides();
+  //make_bip();
 }
 
 uint8_t serial_byte_index = 0;  // Index for serial incomming bytes
@@ -158,18 +162,18 @@ void serialEvent() {
         serial_byte_index++;
       }
     } else {
-      // Center the recived image in the stitch_bit_array[200]
-      uint8_t stitch_byte_offset = (uint8_t)((STITCHES - serial_byte_index) / 2);
+      // Center the recived image in the stitch_array[200]
+      uint8_t stitch_offset = (uint8_t)((STITCHES - serial_byte_index) / 2);
       for (uint8_t byte_index = 0; byte_index < serial_byte_index; byte_index++) {
-        stitch_bit_array[stitch_byte_offset + byte_index] = serial_data[byte_index];
+        stitch_array[stitch_offset + byte_index] = serial_data[byte_index];
       }
 
-      // Concatanate stitch_bit_array[200] into stitch_byte_array[25]
+      // Concatanate stitch_array[200] into stitch_byte_array[25]
       uint8_t stitch_byte_index = 0;
       uint8_t stitch_bit_index = 0;
       for (uint8_t stitch_index = 0; stitch_index < STITCHES; stitch_index++) {
         stitch_bit_index = stitch_index % 8;
-        if (stitch_bit_array[stitch_index] == 1) {
+        if (stitch_array[stitch_index] == 1) {
           bitSet(stitch_byte_array[stitch_byte_index], stitch_bit_index);
         } else {
           bitClear(stitch_byte_array[stitch_byte_index], stitch_bit_index);
@@ -182,6 +186,7 @@ void serialEvent() {
       led_state_B = !led_state_B;
       digitalWrite(LED_PIN_B, led_state_B);
       bip_timer = millis();
+      setAnalogReadFreeRunning(true);
     }
   }
 }
@@ -201,6 +206,7 @@ void eol_left_read_complete(uint16_t eol_left_val) {
     case GOING_LEFT:
       if (eol_left_val > EOL_THRESHOLD_L && going_left == START) {
         going_left = STOP;
+        setAnalogReadFreeRunning(false);
         Serial.write(HEADER);
       }
       break;
@@ -216,15 +222,16 @@ void eol_right_read_complete(uint16_t eol_right_val) {
   noInterrupts();
   switch (cariage_dir) {
     case GOING_LEFT:
-      if (eol_right_val < EOL_THRESHOLD_R && going_left == STOP) {
+      if (eol_right_val > EOL_THRESHOLD_R && going_left == STOP) { // < for the KH910
         going_left = START;
         phase_encoder_pos = PHASE_ENCODER_START_R;
         analogReadAsync(EOL_L_PIN, eol_left_read_complete);
       }
       break;
     case GOING_RIGHT:
-      if (eol_right_val < EOL_THRESHOLD_R && going_right == START) {
+      if (eol_right_val > EOL_THRESHOLD_R && going_right == START) { // < For the KH910
         going_right = STOP;
+        setAnalogReadFreeRunning(false);
         Serial.write(HEADER);
       }
       break;
@@ -236,12 +243,14 @@ void eol_right_read_complete(uint16_t eol_right_val) {
 
 void phase_encoder_ISR() {
 
+  uint8_t values = PIND;
+
   last_phase_encoder_state = phase_encoder_state;
   //phase_encoder_state = digitalRead(PHASE_ENC_PIN);
-  phase_encoder_state = (PIND & _BV(PD4)) != 0;
+  phase_encoder_state = (values & _BV(PD4)) != 0;
 
   //if (digitalRead(DIR_ENC_PIN)) {
-  if ((PIND & _BV(PD3)) != 0) {
+  if ((values & _BV(PD3)) != 0) {
     cariage_dir = GOING_RIGHT;
     if (!last_phase_encoder_state && phase_encoder_state) {  // Rising
       update_solenoides_chunc = CHUNK_0_7;
@@ -264,7 +273,7 @@ void phase_encoder_ISR() {
 
 void write_solenoides() {
 
-  if (phase_encoder_pos >= 0 && phase_encoder_pos < STITCHES_BYTES) {
+  if (phase_encoder_pos >= 0 && phase_encoder_pos < STITCHES_BYTES - 1) {
     switch (update_solenoides_chunc) {
       case CHUNK_0_7:
         //noInterrupts();

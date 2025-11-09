@@ -4,8 +4,12 @@
 #define EOL_R_PIN A0  // End Of Line Right
 #define EOL_L_PIN A1  // End Of Line Left
 
-#define EOL_THRESHOLD_L 200  // End lines sensors threshold
-#define EOL_THRESHOLD_R 200  // End lines sensors threshold
+
+//#define EOL_THRESHOLD_R 200  // End of lines sensors threshold value - KH910
+//#define EOL_THRESHOLD_L 200  // End of lines sensors threshold value - KH910
+
+#define EOL_THRESHOLD_L 400  // End lines sensors threshold
+#define EOL_THRESHOLD_R 400  // End lines sensors threshold
 
 bool toggle_right = true;  // boolean to sens the RISING age of the phase encoder when the carriage going RIGHT
 bool toggle_left = true;   // boolean to sens the RISING age of the phase encoder when the carriage going LEFT
@@ -24,7 +28,7 @@ void loop() {
   Serial.println(left_end_off_line_sensor);
 
   // Test if the RIGHT end ligne sensor is passed
-  if (right_end_off_line_sensor < EOL_THRESHOLD_R && toggle_right) {
+  if (right_end_off_line_sensor > EOL_THRESHOLD_R && toggle_right) { // < For the KH910 
     toggle_right = false;
     toggle_left = true;
     Serial.println("end_line_right");

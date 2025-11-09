@@ -1,260 +1,202 @@
 /*
  BROTHER KH-940
- 2022 (c) maurin.box@gmail.com
+ 2025 (c) maurin@etextile.org
  Used hardwear : AYAB shield V1.0 https://github.com/AllYarnsAreBeautiful/ayab-hardware
- This sketch read and knitt images
+ This sketch read and knitt images & text
  The loded image must not be wider than 200 pixels
  */
 
+import java.util.Arrays;
 import processing.serial.*;
 
-Serial myPort;                          // Create object from Serial class
-final String PORTNAME = "/dev/ttyACM0"; // Select your port number
+Serial myPort;
+final String PORTNAME = "/dev/ttyACM0";
 
-final int BAUDERATE   = 115200;         // Serial port speed
-final byte HEADER     = byte(64);       // Header recived evrey knetted row
-final byte FOOTER     = byte(33);       // Footer to terminate the list of pixels to knit
+final int BAUDERATE   = 115200;    // Serial port speed
+final byte HEADER     = (byte)64;  // Header recived evrey knetted row
+final byte FOOTER     = (byte)33;  // Footer to terminate the list of pixels to knit
 
-final int STITCHES    = 200;            //
+final int STITCHES    = 200;       //
+final int BLACK       = -1;        //
+final int WHITE       = -16777216; //
 
-final int BLACK       = -1;             //
-final int WHITE       = -16777216;      //
+int GRID_PADDING = 20;             // Left & right space around the grid
+float PIXEL_SIZE;
+float GRID_PADDING_SIZE;
+int border_width_pix_default;
 
-final int LAYERS      = 5;              //
-final int CANVAS_W    = 1000;            //
-final int CANVAS_H    = 600;            //
+char input_char;                   // Variable to store serial incoming data
 
-float PADDING = 20;                     // Left & Right space around the image
-float PADDING_SIZE = 0;                 //
-float PIXEL_SIZE = 0;                   //
+byte[]bin_array;
+byte[]background_array;
+byte[]merged_array;
 
-int image_w = 0;                        // The image width in pixel
-int image_h = 0;                        // The image height in pixel
-int IMAGE_PIXEL_OFFSET = 0;             // Space to display the image in the middle of the canvas
+byte[]border_array;
+byte[]merged_borders_array;
 
-int image_bin_array_size = 0;           // The raw image size in pixel
+String merged_mode = "union";
 
-int BUTTON_COLS = 8;
-int BUTTON_ROWS = 8;
-int BUTTON_SIZE = 15;
-Button buttons[][];
+//KnittPict module;
+KnittText module;
 
-char inputChar;                         // Variable to store incoming data
-byte[][]pattern_layers;                 //
+Grid grid;
+Flood_fill background;
+Rules rules;
+Borders borders;
 
-PImage raw_image;                       // Loded image
+int line_index;               // The current row to knitt
+float left_rule_pos_x;
 
-byte[]image_bin_array = {0};
-
-PFont font;
-
-int line_index = 0;                      // Store the current row to knitt
-int selected_pattern = 4;
-boolean update_frame = false;
-
-final boolean COMPORT = true;           // Set it true to connect your knitter
-final boolean DEBUG   = true;           //
+final boolean COMPORT = false; // Set it true to connect your knitter
+final boolean DEBUG   = true; //
 
 void setup() {
-  size(1000, 600);
-  //font = createFont("Georgia", 40);
-  //textFont(font);
-  //raw_image = loadImage("../pictures/petit_jabron.png");
-  raw_image = loadImage("../pictures/damier.png");
-  //raw_image = loadImage("../pictures/interdit.png");
-  //raw_image = loadImage("../pictures/stop test 200pix.png");
-
-  // Scan all pixels from the imported picture
-  raw_image.loadPixels();
-  image_w = raw_image.width;
-  println("IMAGE_WIDTH: " + image_w);
-  if (image_w > STITCHES) error("IMAGE_WIDTH_TO_LARGE");
-
-  image_h = raw_image.height;
-  image_bin_array_size = image_w * image_h;
-  image_bin_array = new byte[image_bin_array_size];
-
-  generate_image_bin_array(image_bin_array, raw_image); // Populate the bin array from image pixels
-
-  PIXEL_SIZE = width / ((PADDING * 2) + STITCHES);
-  PADDING_SIZE = PADDING * PIXEL_SIZE;
-  
-  // If the loaded image is less than 200 pixel (max size)
-  // Set the pattern in the middle of the knitting machine
-  IMAGE_PIXEL_OFFSET = int(( STITCHES - image_w ) / 2);
-  line_index = image_h;
-
-  pattern_layers = new byte[LAYERS][image_bin_array_size];
-  patterns_generator(pattern_layers, raw_image);
-
+  noLoop();
+  size(1500, 600);
   if (COMPORT) myPort = new Serial(this, PORTNAME, BAUDERATE);
+  PIXEL_SIZE = (width / ((GRID_PADDING * 2) + STITCHES));
+  GRID_PADDING_SIZE = (GRID_PADDING * PIXEL_SIZE);
+  border_width_pix_default = 8;
 
-  display_grid(line_index);
-  display_picture(line_index);
-  display_line_index(line_index);
-  display_read_line();
+  // Pixellari.ttf
+  // pixelated.ttf
+  // dogica.ttf
+  module = new KnittText("  Pourquoi \n  faire   simple  \n  quand   on\n  peut    faire \n  complique ", "pixelated.ttf", 15);
 
-  if (DEBUG) println("IMAGE_PIXEL_OFFSET: " + IMAGE_PIXEL_OFFSET);
-  if (DEBUG) println("PIXEL_SIZE: " + PIXEL_SIZE);
-  if (DEBUG) println("PADDING_SIZE: " + PADDING_SIZE);
-  if (DEBUG) println("LINE_INDEX: " + line_index);
+  //module = new KnittPict(loadImage("../pictures/stop test 200pix.png"));
 
-  /*
-  buttons = new Button[BUTTON_ROWS][BUTTON_COLS];   // buttons array
+  bin_array = module.get_array();
+  merged_array = new byte[module.width_pix * module.height_pix];
+  line_index = module.height_pix - 1 ;
 
-  for ( int i=0; i<BUTTON_ROWS; i++ ) {
-    for ( int j=0; j<BUTTON_COLS; j++ ) {
-      buttons[i][j] = new Button( );  // fill the array with buttons
-    }
-  }
-  */
+  grid = new Grid(STITCHES, module.height_pix);
+  grid.display(line_index);
+
+  background = new Flood_fill(bin_array, module.width_pix, module.height_pix);
+  background.run(width/2, height/2);
+  background.display(line_index);
+  background_array = background.get_array();
+
+  rules = new Rules(module.width_pix, module.height_pix, border_width_pix_default);
+
+  borders = new Borders(module.width_pix, module.height_pix, border_width_pix_default);
+
+  border_array = borders.pattern();
+
+  //merged_array = mergeArrays(bin_array, background_array, "union"); // NOT NEAD!?
+  //merged_array = mergeArrays(bin_array, background_array, "intersection");
+  merged_array = mergeArrays(bin_array, background_array, "addition");
+
+  merged_borders_array = merge3Images(
+    border_array, borders.border_width_pix,
+    merged_array, background.width_pix,
+    border_array, borders.border_width_pix,
+    background.height_pix
+    );
+
+  redraw();
 }
 
 /////////////////////////////////////////// LOOP
 void draw() {
+
+  grid.display(line_index);
+  borders.display(line_index);
+  background.display(line_index);
+  rules.display(line_index);
+}
+
+void serialEvent(Serial myPort) {
+
   if (COMPORT) {
+
     while (myPort.available () > 0) {
-      inputChar = myPort.readChar();
-      if (inputChar == HEADER && update_frame == false) {
-        line_index--;
-        if (line_index < 0) line_index = 0;
-        println("LINE_INDEX :" + line_index);
-        update_frame = true;
-      }
-    }
-  }
-  if (update_frame == true) {
-    update_frame = false;
-    display_grid(line_index);
-    display_picture(line_index);
-    display_line_index(line_index);
-    display_read_line();
-    serial_buffer_write(image_bin_array, line_index);
-  }
-}
-
-void serial_buffer_write(byte[]bin_array_ptr, int line_index_ptr) {
-
-  int pixel_index_start = line_index_ptr * image_w;
-
-  for (int byte_index=pixel_index_start; byte_index<(pixel_index_start + image_w); byte_index++) {
-    if (COMPORT) myPort.write(bin_array_ptr[byte_index]);
-    if (DEBUG) print(bin_array_ptr[byte_index]);
-    delay(2);
-  }
-  delay(30);
-  if (COMPORT) myPort.write(FOOTER);
-  if (DEBUG) println("FOOTER: " + FOOTER); // Print out: -1 ?
-}
-
-void display_line_index(int index) {
-  fill(255, 0, 0);
-  text(index, 30, height/2 - 10);
-}
-
-void display_grid(int vertical_pos) {
-  background(255);     // Clear trails
-  strokeWeight(0.5);   //
-  stroke(0);           // Black lines
-  fill(255);
-  for (int row_pos=0; row_pos<image_h; row_pos++) {
-    for (int col_pos=0; col_pos<STITCHES; col_pos++) {
-      rect(
-        (col_pos * PIXEL_SIZE) + PADDING_SIZE,
-        (row_pos * PIXEL_SIZE) + height/2 - (vertical_pos * PIXEL_SIZE),
-        PIXEL_SIZE,
-        PIXEL_SIZE
-        );
-    }
-  }
-}
-
-// Display all pixels
-void display_picture(int vertical_pos) {
-  strokeWeight(0.5);   // 
-  stroke(0);           // Black lines
-  fill(0);
-
-  for (int row_pos=0; row_pos<image_h; row_pos++) {
-    int row_pixel_index = row_pos * image_w;
-
-    for (int col_pos=0; col_pos<image_w; col_pos++) {
-      int pixel_index = row_pixel_index + col_pos;
-
-      if (image_bin_array[pixel_index] == 0) {
-        rect(
-          (col_pos * PIXEL_SIZE) + PADDING_SIZE + (IMAGE_PIXEL_OFFSET * PIXEL_SIZE),
-          (row_pos * PIXEL_SIZE) + height/2 - (vertical_pos * PIXEL_SIZE),
-          PIXEL_SIZE,
-          PIXEL_SIZE
-          );
-      }
-    }
-  }
-}
-
-// Draw two red lines to visualise the current frame onto the pattern
-void display_read_line() {
-  strokeWeight(1.1);
-  stroke(255, 0, 0);
-  line(0, height/2, width, height/2);
-  line(0, height/2 + PIXEL_SIZE, width, height/2 + PIXEL_SIZE);
-}
-
-void mouseClicked() {
-  int pos_x = int (((mouseX - PADDING_SIZE) / PIXEL_SIZE) - IMAGE_PIXEL_OFFSET);
-  int pos_y = int (((mouseY - height/2 ) / PIXEL_SIZE) + line_index);
-  if (DEBUG) println("X: " + pos_x + " Y: " + pos_y);
-  flood_fill(raw_image, image_bin_array, pattern_layers[selected_pattern], pos_x, pos_y);
-
-  display_picture(line_index);
-  display_line_index(line_index);
-  display_read_line();
-}
-
-// Place the input image in the middle off the output array
-void generate_image_bin_array(byte[] output, PImage input) {
-  
-  for (int row_pos=0; row_pos<input.height; row_pos++) {
-    int input_row_pixel_index = row_pos * input.width;
-
-    for (int col_pos=0; col_pos<input.width; col_pos++) {
-      int pixel_index = input_row_pixel_index + col_pos;
-
-      if (input.pixels[pixel_index] == BLACK) {
-        output[pixel_index] = byte(1);
-      } else {
-        output[pixel_index] = byte(0);
-      }
-    }
-  }
-}
-
-// Replace it with live patterns generator !?
-void patterns_generator(byte[][] patterns, PImage input) {
-
-  for (int pattern=0; pattern<LAYERS; pattern++) {
-
-    for (int row_pos=0; row_pos<input.height; row_pos++) {
-      int row_pixel_index = row_pos * input.width;
-
-      for (int col_pos=0; col_pos<input.width; col_pos++) {
-        int pixel_index = row_pixel_index + col_pos;
-
-        int background_pixel = pixel_index % (pattern + 2); // ??
-
-        if (background_pixel == 0) {
-          patterns[pattern][pixel_index] = byte(1);
-        } else {
-          patterns[pattern][pixel_index] = byte(0);
+      input_char = myPort.readChar();
+      if (input_char == HEADER) {
+        if (line_index > 0) {
+          line_index--;
+          serial_buffer_write(module.width_pix, line_index);
         }
       }
     }
   }
 }
 
+void serial_buffer_write(int source_width_pix, int vertical_pos) {
+
+  int border_width_pix = borders.border_width_pix;
+  int total_line_width_pix = source_width_pix + border_width_pix * 2;
+  byte[]line_array = new byte[total_line_width_pix];
+
+  int start_pos_source = vertical_pos * total_line_width_pix;
+
+  for (int pixel_index = 0; pixel_index < total_line_width_pix; pixel_index++) {
+
+    int bin_array_index = start_pos_source + abs(pixel_index - (total_line_width_pix - 1)); // Revers the line index
+
+    line_array[pixel_index] = merged_borders_array[bin_array_index];
+  }
+
+  if (COMPORT) {
+    /*
+    for (int i = 0; i < total_line_width_pix; i++) {
+     myPort.write(line_array[i]);
+     delay(5); // délai de 5 ms entre chaque byte
+     }
+     */
+    myPort.write(line_array);
+    delay(20);
+    myPort.write(FOOTER);
+  }
+
+  if (DEBUG) {
+    print("LINE_INDEX: " + line_index + " - ");
+    for (int i = 0; i < total_line_width_pix; i++) {
+      print(line_array[i] + " ");
+    }
+    println("FOOTER: " + FOOTER);
+  }
+}
+
+void mouseClicked() {
+  background.run(mouseX, mouseY);
+  background_array = background.get_array();
+
+  border_array = borders.pattern();
+
+  merged_array = mergeArrays(bin_array, background_array, "union");
+  //merged_array = mergeArrays(bin_array, background_array, "intersection");
+  //merged_array = mergeArrays(bin_array, background_array, "addition");
+
+  merged_borders_array = merge3Images(
+    border_array, borders.border_width_pix,
+    merged_array, background.width_pix,
+    border_array, borders.border_width_pix,
+    background.height_pix
+    );
+
+  redraw();
+}
+
+void mousePressed() {
+  rules.pressed();
+}
+
+void mouseDragged() {
+  left_rule_pos_x = rules.dragged(mouseX);
+  borders.dragged(left_rule_pos_x);
+  redraw();
+}
+
+void mouseReleased() {
+
+  rules.released();
+}
+
 // Use keys to move the pattern and activate DEBUG mode
 void keyPressed() {
+
+  background.key_pressed();
 
   if (key == CODED) {
     if (keyCode == DOWN) {
@@ -262,27 +204,71 @@ void keyPressed() {
         line_index = 0;
       } else {
         line_index--;
-        update_frame = true;
       }
     }
     if (keyCode == UP) {
-      if (line_index >= image_h - 1) {
-        line_index = image_h - 1;
+      if (line_index >= module.height_pix - 1) {
+        line_index = module.height_pix - 1;
       } else {
         line_index++;
-        update_frame = true;
       }
     }
     if (keyCode == RIGHT) {
-      line_index = image_h - 1;
-      update_frame = true;
+      line_index = module.height_pix - 1;
     }
     if (keyCode == LEFT) {
       line_index = 0;
-      update_frame = true;
     }
+    serial_buffer_write(module.width_pix, line_index);
+    redraw();
   }
 }
+
+// Fusion de deux tableaux de bytes (même taille)
+byte[] mergeArrays(byte[]array1, byte[]array2, String mode) {
+
+  if (array1.length != array2.length) {
+    println("Erreur : les tableaux n'ont pas la même taille !");
+    return null;
+  }
+
+  byte[]merged = new byte[array1.length];
+
+  for (int i = 0; i < array1.length; i++) {
+    if (mode.equals("union")) {
+      merged[i] = (byte)((array1[i] == 1 || array2[i] == 1) ? 1 : 0);
+    } else if (mode.equals("intersection")) {
+      merged[i] = (byte)((array1[i] == 1 && array2[i] == 1) ? 1 : 0);
+    } else if (mode.equals("addition")) {
+      merged[i] = (byte) min(1, array1[i] + array2[i]); // Exemple : addition simple (max 1)
+    }
+  }
+  return merged;
+}
+
+byte[] merge3Images(byte[]left, int wL, byte[]center, int wC, byte[]right, int wR, int h) {
+
+  int totalW = wL + wC + wR;
+  byte[] result = new byte[h * totalW];
+
+  for (int y = 0; y < h; y++) {
+    // --- Copier image gauche ---
+    for (int x = 0; x < wL; x++) {
+      result[y * totalW + x] = left[y * wL + x];
+    }
+    // --- Copier image centrale ---
+    for (int x = 0; x < wC; x++) {
+      result[y * totalW + (x + wL)] = center[y * wC + x];
+    }
+    // --- Copier image droite ---
+    for (int x = 0; x < wR; x++) {
+      result[y * totalW + (x + wL + wC)] = right[y * wR + x];
+    }
+  }
+
+  return result;
+}
+
 
 void error(String msg) {
 
