@@ -27,7 +27,7 @@ class Rules {
 
   boolean moving_rules = false;
 
-  Rules(int _module_width_pix, int _module_height_pix, int border_width_pix_default) {
+  Rules(int _module_width_pix, int _module_height_pix) {
 
     this.width_pix = _module_width_pix;
     this.height_pix = _module_height_pix;
@@ -35,15 +35,15 @@ class Rules {
     this._width = this.width_pix * PIXEL_SIZE;
     this._height = this.height_pix * PIXEL_SIZE;
 
-    this.border_width_pix = border_width_pix_default;
+    this.border_width_pix = BORDER_WIDTH_PIX;
 
     this.offset_x = GRID_PADDING_SIZE + ((STITCHES - this.width_pix) / 2) * PIXEL_SIZE;
     this.offset_x_pix = (int)(this.offset_x / PIXEL_SIZE);
 
-    this.left_pos_x = this.offset_x - border_width_pix_default * PIXEL_SIZE;
+    this.left_pos_x = this.offset_x - this.border_width_pix * PIXEL_SIZE;
     this.left_pos_x_pix = (int)(this.left_pos_x / PIXEL_SIZE);
 
-    this.reight_pos_x = this.offset_x + this._width + border_width_pix_default * PIXEL_SIZE;
+    this.reight_pos_x = this.offset_x + this._width + this.border_width_pix * PIXEL_SIZE;
   }
 
   // Draw two red lines to visualise the current frame onto the pattern

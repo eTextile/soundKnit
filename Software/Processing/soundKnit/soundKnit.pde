@@ -23,7 +23,7 @@ final int WHITE       = -16777216; //
 int GRID_PADDING = 20;             // Left & right space around the grid
 float PIXEL_SIZE;
 float GRID_PADDING_SIZE;
-int border_width_pix_default;
+int BORDER_WIDTH_PIX;
 
 char input_char;                   // Variable to store serial incoming data
 
@@ -54,36 +54,36 @@ void setup() {
   if (COMPORT) myPort = new Serial(this, PORTNAME, BAUDERATE);
   PIXEL_SIZE = (width / ((GRID_PADDING * 2) + STITCHES));
   GRID_PADDING_SIZE = (GRID_PADDING * PIXEL_SIZE);
-  border_width_pix_default = 8;
+  BORDER_WIDTH_PIX = 8;
 
   // Pixellari.ttf
   // pixelated.ttf
   // dogica.ttf
-  _module = new KnittText("  Pourquoi \n  faire   simple  \n  quand   on\n  peut    faire \n  complique ", "./typo/pixelated.ttf", 15);
+  _module = new KnittText("  Pourquoi \n  faire   simple  \n  quand   on  \n  peut    faire \n  complique ", "./typo/pixelated.ttf", 15);
 
   //_module = new KnittPict(loadImage("../pictures/stop test 200pix.png"));
 
-  bin_array = _module.get_array();
+  this.bin_array = _module.get_array();
   merged_array = new byte[_module.width_pix * _module.height_pix];
   line_index = _module.height_pix - 1 ;
 
   grid = new Grid(STITCHES, _module.height_pix);
   grid.display(line_index);
 
-  background = new Flood_fill(bin_array, _module.width_pix, _module.height_pix);
+  background = new Flood_fill(this.bin_array, _module.width_pix, _module.height_pix);
   background.run(width/2, height/2);
   background.display(line_index);
   background_array = background.get_array();
 
-  rules = new Rules(_module.width_pix, _module.height_pix, border_width_pix_default);
+  rules = new Rules(_module.width_pix, _module.height_pix);
 
-  borders = new Borders(_module.width_pix, _module.height_pix, border_width_pix_default);
+  borders = new Borders(_module.width_pix, _module.height_pix);
 
   border_array = borders.pattern();
 
-  //merged_array = merge_arrays(bin_array, background_array, "union"); // NOT NEAD!?
-  //merged_array = merge_arrays(bin_array, background_array, "intersection");
-  merged_array = merge_arrays(bin_array, background_array, "addition");
+  //merged_array = merge_arrays(this.bin_array, background_array, "union"); // NOT NEAD!?
+  //merged_array = merge_arrays(this.bin_array, background_array, "intersection");
+  merged_array = merge_arrays(this.bin_array, background_array, "addition");
 
   merged_borders_array = merge3Images(
     border_array, borders.border_width_pix,
@@ -129,9 +129,7 @@ void serial_buffer_write(int source_width_pix, int vertical_pos) {
   int start_pos_source = vertical_pos * total_line_width_pix;
 
   for (int pixel_index = 0; pixel_index < total_line_width_pix; pixel_index++) {
-
-    int bin_array_index = start_pos_source + abs(pixel_index - (total_line_width_pix - 1)); // Revers the line index
-
+    int bin_array_index = start_pos_source + (total_line_width_pix - pixel_index - 1); // Revers the line index
     line_array[pixel_index] = merged_borders_array[bin_array_index];
   }
 
@@ -162,9 +160,9 @@ void mouseClicked() {
 
   border_array = borders.pattern();
 
-  merged_array = merge_arrays(bin_array, background_array, "union");
-  //merged_array = merge_arrays(bin_array, background_array, "intersection");
-  //merged_array = merge_arrays(bin_array, background_array, "addition");
+  merged_array = merge_arrays(this.bin_array, background_array, "union");
+  //merged_array = merge_arrays(this.bin_array, background_array, "intersection");
+  //merged_array = merge_arrays(this.bin_array, background_array, "addition");
 
   merged_borders_array = merge3Images(
     border_array, borders.border_width_pix,
@@ -194,7 +192,7 @@ void mouseReleased() {
 // Use keys to move the pattern and activate DEBUG mode
 void keyPressed() {
 
-  background.key_pressed();
+  background.key_pressed(bin_array);
 
   if (key == CODED) {
     if (keyCode == DOWN) {
@@ -218,8 +216,8 @@ void keyPressed() {
       line_index = 0;
     }
     serial_buffer_write(_module.width_pix, line_index);
-    redraw();
   }
+  redraw();
 }
 
 // Fusion de deux tableaux de bytes (même taille)

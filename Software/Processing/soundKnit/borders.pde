@@ -29,7 +29,7 @@ class Borders {
   byte[][]pattern_layers;
   int selected_pattern = 3;
 
-  Borders(int _module_width_pix, int _module_height_pix, int border_width_pix_default) {
+  Borders(int _module_width_pix, int _module_height_pix) {
 
     this.width_pix = _module_width_pix;
     this._width = this.width_pix * PIXEL_SIZE;
@@ -37,7 +37,7 @@ class Borders {
     this.height_pix = _module_height_pix;
     this._height = this.height_pix * PIXEL_SIZE;
 
-    this.border_width_pix = border_width_pix_default;
+    this.border_width_pix = BORDER_WIDTH_PIX;
     this.border_width = this.border_width_pix * PIXEL_SIZE;
 
     this.x_offset = GRID_PADDING_SIZE + ((STITCHES - this.width_pix) / 2) * PIXEL_SIZE;

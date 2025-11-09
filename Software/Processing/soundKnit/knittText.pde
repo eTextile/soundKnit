@@ -59,7 +59,7 @@ class KnittText {
         total_line_width_pix = (int)textWidth(ligne);
 
         PGraphics pg = createGraphics(total_line_width_pix, line_height_pix);
-        pg.noSmooth();
+        //pg.noSmooth();
         pg.beginDraw();
         pg.background(0);
         pg.fill(255);

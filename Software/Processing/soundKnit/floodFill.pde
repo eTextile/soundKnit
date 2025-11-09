@@ -44,8 +44,8 @@ class Flood_fill {
     bin_array_copy = new byte[this.width_pix * this.height_pix];
     System.arraycopy(bin_array, 0, bin_array_copy, 0, this.width_pix * this.height_pix);
 
-    tmp_bin_array = new byte[this.width_pix * this.height_pix];
-    System.arraycopy(bin_array, 0, tmp_bin_array, 0, this.width_pix * this.height_pix);
+    this.tmp_bin_array = new byte[this.width_pix * this.height_pix];
+    System.arraycopy(bin_array, 0, this.tmp_bin_array, 0, this.width_pix * this.height_pix);
 
     pattern_layers = new byte[layers][this.width_pix * this.height_pix];
 
@@ -79,19 +79,19 @@ class Flood_fill {
     while (!q.isEmpty () ) {
       p = q.removeFirst();
 
-      if ( is_to_fill(p.x, p.y, tmp_bin_array, select_color) ) {
+      if ( is_to_fill(p.x, p.y, this.tmp_bin_array, select_color) ) {
         west = east = p.x;
-        while ( is_to_fill(--west, p.y, tmp_bin_array, select_color) );
-        while ( is_to_fill(++east, p.y, tmp_bin_array, select_color) );
+        while ( is_to_fill(--west, p.y, this.tmp_bin_array, select_color) );
+        while ( is_to_fill(++east, p.y, this.tmp_bin_array, select_color) );
 
         for (int x = west + 1; x < east; x++) {
           int pixel_index = p.y * this.width_pix + x;
-          tmp_bin_array[pixel_index] = replacement_color;
+          this.tmp_bin_array[pixel_index] = replacement_color;
           bin_array_copy[pixel_index] = pattern_layers[this.selected_pattern][pixel_index];
-          if ( is_to_fill(x, p.y - 1, tmp_bin_array, select_color) ) {
+          if ( is_to_fill(x, p.y - 1, this.tmp_bin_array, select_color) ) {
             q.add(new Point(x, p.y - 1));
           }
-          if ( is_to_fill(x, p.y + 1, tmp_bin_array, select_color) ) {
+          if ( is_to_fill(x, p.y + 1, this.tmp_bin_array, select_color) ) {
             q.add(new Point(x, p.y + 1));
           }
         }
@@ -141,9 +141,11 @@ class Flood_fill {
     }
   }
 
-  void key_pressed() {
+  void key_pressed(byte[]_array) {
     if (key >= '0' && key <= '9') {
-      //Arrays.fill(tmp_bin_array, (byte)0);
+      //Arrays.fill(this.tmp_bin_array, (byte)0);
+      System.arraycopy(_array, 0, this.tmp_bin_array, 0, this.width_pix * this.height_pix);
+
       this.selected_pattern = key - '0';
       println("Pattern sélectionné :", pattern_names[this.selected_pattern]);
     }
