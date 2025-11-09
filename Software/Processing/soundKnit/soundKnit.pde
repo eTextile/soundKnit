@@ -34,10 +34,8 @@ byte[]merged_array;
 byte[]border_array;
 byte[]merged_borders_array;
 
-String merged_mode = "union";
-
-//KnittPict module;
-KnittText module;
+//KnittPict _module;
+KnittText _module;
 
 Grid grid;
 Flood_fill background;
@@ -61,31 +59,31 @@ void setup() {
   // Pixellari.ttf
   // pixelated.ttf
   // dogica.ttf
-  module = new KnittText("  Pourquoi \n  faire   simple  \n  quand   on\n  peut    faire \n  complique ", "pixelated.ttf", 15);
+  _module = new KnittText("  Pourquoi \n  faire   simple  \n  quand   on\n  peut    faire \n  complique ", "./typo/pixelated.ttf", 15);
 
-  //module = new KnittPict(loadImage("../pictures/stop test 200pix.png"));
+  //_module = new KnittPict(loadImage("../pictures/stop test 200pix.png"));
 
-  bin_array = module.get_array();
-  merged_array = new byte[module.width_pix * module.height_pix];
-  line_index = module.height_pix - 1 ;
+  bin_array = _module.get_array();
+  merged_array = new byte[_module.width_pix * _module.height_pix];
+  line_index = _module.height_pix - 1 ;
 
-  grid = new Grid(STITCHES, module.height_pix);
+  grid = new Grid(STITCHES, _module.height_pix);
   grid.display(line_index);
 
-  background = new Flood_fill(bin_array, module.width_pix, module.height_pix);
+  background = new Flood_fill(bin_array, _module.width_pix, _module.height_pix);
   background.run(width/2, height/2);
   background.display(line_index);
   background_array = background.get_array();
 
-  rules = new Rules(module.width_pix, module.height_pix, border_width_pix_default);
+  rules = new Rules(_module.width_pix, _module.height_pix, border_width_pix_default);
 
-  borders = new Borders(module.width_pix, module.height_pix, border_width_pix_default);
+  borders = new Borders(_module.width_pix, _module.height_pix, border_width_pix_default);
 
   border_array = borders.pattern();
 
-  //merged_array = mergeArrays(bin_array, background_array, "union"); // NOT NEAD!?
-  //merged_array = mergeArrays(bin_array, background_array, "intersection");
-  merged_array = mergeArrays(bin_array, background_array, "addition");
+  //merged_array = merge_arrays(bin_array, background_array, "union"); // NOT NEAD!?
+  //merged_array = merge_arrays(bin_array, background_array, "intersection");
+  merged_array = merge_arrays(bin_array, background_array, "addition");
 
   merged_borders_array = merge3Images(
     border_array, borders.border_width_pix,
@@ -115,7 +113,7 @@ void serialEvent(Serial myPort) {
       if (input_char == HEADER) {
         if (line_index > 0) {
           line_index--;
-          serial_buffer_write(module.width_pix, line_index);
+          serial_buffer_write(_module.width_pix, line_index);
         }
       }
     }
@@ -164,9 +162,9 @@ void mouseClicked() {
 
   border_array = borders.pattern();
 
-  merged_array = mergeArrays(bin_array, background_array, "union");
-  //merged_array = mergeArrays(bin_array, background_array, "intersection");
-  //merged_array = mergeArrays(bin_array, background_array, "addition");
+  merged_array = merge_arrays(bin_array, background_array, "union");
+  //merged_array = merge_arrays(bin_array, background_array, "intersection");
+  //merged_array = merge_arrays(bin_array, background_array, "addition");
 
   merged_borders_array = merge3Images(
     border_array, borders.border_width_pix,
@@ -207,25 +205,25 @@ void keyPressed() {
       }
     }
     if (keyCode == UP) {
-      if (line_index >= module.height_pix - 1) {
-        line_index = module.height_pix - 1;
+      if (line_index >= _module.height_pix - 1) {
+        line_index = _module.height_pix - 1;
       } else {
         line_index++;
       }
     }
     if (keyCode == RIGHT) {
-      line_index = module.height_pix - 1;
+      line_index = _module.height_pix - 1;
     }
     if (keyCode == LEFT) {
       line_index = 0;
     }
-    serial_buffer_write(module.width_pix, line_index);
+    serial_buffer_write(_module.width_pix, line_index);
     redraw();
   }
 }
 
 // Fusion de deux tableaux de bytes (même taille)
-byte[] mergeArrays(byte[]array1, byte[]array2, String mode) {
+byte[] merge_arrays(byte[]array1, byte[]array2, String mode) {
 
   if (array1.length != array2.length) {
     println("Erreur : les tableaux n'ont pas la même taille !");

@@ -29,12 +29,12 @@ class Borders {
   byte[][]pattern_layers;
   int selected_pattern = 3;
 
-  Borders(int module_width_pix, int module_height_pix, int border_width_pix_default) {
+  Borders(int _module_width_pix, int _module_height_pix, int border_width_pix_default) {
 
-    this.width_pix = module_width_pix;
+    this.width_pix = _module_width_pix;
     this._width = this.width_pix * PIXEL_SIZE;
 
-    this.height_pix = module_height_pix;
+    this.height_pix = _module_height_pix;
     this._height = this.height_pix * PIXEL_SIZE;
 
     this.border_width_pix = border_width_pix_default;

@@ -27,10 +27,10 @@ class Rules {
 
   boolean moving_rules = false;
 
-  Rules(int module_width_pix, int module_height_pix, int border_width_pix_default) {
+  Rules(int _module_width_pix, int _module_height_pix, int border_width_pix_default) {
 
-    this.width_pix = module_width_pix;
-    this.height_pix = module_height_pix;
+    this.width_pix = _module_width_pix;
+    this.height_pix = _module_height_pix;
 
     this._width = this.width_pix * PIXEL_SIZE;
     this._height = this.height_pix * PIXEL_SIZE;
@@ -59,7 +59,7 @@ class Rules {
     line(0, height/2 + PIXEL_SIZE, width, height/2 + PIXEL_SIZE);
     text(line_index, 30, height/2 - 10);
 
-    // Module left & reight vertical lines
+    // _module left & reight vertical lines
     line(this.offset_x, 0, this.offset_x, height);
     line(this.offset_x + this._width, 0, this.offset_x + this._width, height);
 
