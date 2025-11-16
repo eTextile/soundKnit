@@ -1,5 +1,5 @@
 /*
- BROTHER KH-940
+ BROTHER KH-910 / KH-940
  2025 (c) maurin@etextile.org
  Used hardwear : AYAB shield V1.0 https://github.com/AllYarnsAreBeautiful/ayab-hardware
  This sketch read and knitt images & text
@@ -10,19 +10,19 @@ import java.util.ArrayDeque;
 
 class Flood_fill {
 
-  int width_pix;
-  int height_pix;
+  int mod_width_pix;
+  float mod_width;
 
-  int layers = 10;
-  byte[][]pattern_layers;
-  int selected_pattern = 7;
+  int mod_height_pix;
+
+  float mod_padding_x;
+  int mod_padding_x_pix;
 
   ArrayDeque<Point> q;
 
   byte[]bin_array_copy;
   byte[]tmp_bin_array;
 
-  int offset_x_pix;
 
   String[] pattern_names = {
     "Trame 0 — Damier",
@@ -37,40 +37,39 @@ class Flood_fill {
     "Trame 9 — Motif diagonales ecart"
   };
 
-  Flood_fill(byte[]bin_array, int width_pix, int height_pix) {
-    this.width_pix = width_pix;
-    this.height_pix = height_pix;
+  byte replacement_color = 0;
 
-    bin_array_copy = new byte[this.width_pix * this.height_pix];
-    System.arraycopy(bin_array, 0, bin_array_copy, 0, this.width_pix * this.height_pix);
+  Flood_fill(byte[]bin_array, int _mod_width_pix, int _mod_height_pix) {
 
-    this.tmp_bin_array = new byte[this.width_pix * this.height_pix];
-    System.arraycopy(bin_array, 0, this.tmp_bin_array, 0, this.width_pix * this.height_pix);
+    this.mod_width_pix = _mod_width_pix;
+    //this.mod_width = _mod_width_pix / PIXEL_SIZE;
 
-    pattern_layers = new byte[layers][this.width_pix * this.height_pix];
+    this.mod_height_pix = _mod_height_pix;
 
-    for (int pattern=0; pattern<layers; pattern++) {
-      for (int row_pos=0; row_pos<this.height_pix; row_pos++) {
-        int row_pixel_index = row_pos * this.width_pix;
-        for (int col_pos=0; col_pos<this.width_pix; col_pos++) {
-          int pixel_index = row_pixel_index + col_pos;
-          int background_pixel = pixel_index % (pattern + 2);
-          pattern_layers[pattern][pixel_index] = (background_pixel == 0) ? (byte)1 : (byte)0;
-        }
-      }
-    }
+    this.mod_padding_x_pix = (int)((STITCHES - this.mod_width_pix) / 2);
+    this.mod_padding_x = this.mod_padding_x_pix * PIXEL_SIZE;
+
+    this.bin_array_copy = new byte[this.mod_width_pix * this.mod_height_pix];
+    System.arraycopy(bin_array, 0, this.bin_array_copy, 0, this.mod_width_pix * this.mod_height_pix);
+
+    this.tmp_bin_array = new byte[this.mod_width_pix * this.mod_height_pix];
+    System.arraycopy(bin_array, 0, this.tmp_bin_array, 0, this.mod_width_pix * this.mod_height_pix);
+
     q = new ArrayDeque<Point>();
   }
 
-  void run(int _mouseX, int _mouseY) {
+  void run(byte[]pattern, int _line_index) {
 
-    offset_x_pix = (int)((STITCHES - this.width_pix) / 2);
-    int pos_x = (int)((_mouseX - (GRID_PADDING_SIZE + (offset_x_pix * PIXEL_SIZE))) / PIXEL_SIZE);
-    int pos_y = (int)(((_mouseY - height/2 ) / PIXEL_SIZE) + line_index);
+    this.mod_padding_x_pix = (int)((STITCHES - this.mod_width_pix) / 2);
+    this.mod_padding_x = this.mod_padding_x_pix * PIXEL_SIZE;
 
-    if (pos_x < 0 || pos_x > this.width_pix - 1 || pos_y < 0 || pos_y > this.height_pix - 1) return;
-    byte select_color = bin_array_copy[pos_y * this.width_pix + pos_x];
-    byte replacement_color = (byte) (this.selected_pattern + 10); // couleur de remplissage symbolique
+    int pos_x = (int)((mouseX - (GRID_PADDING_SIZE + this.mod_padding_x)) / PIXEL_SIZE);
+    int pos_y = (int)(((mouseY - height/2 ) / PIXEL_SIZE) + _line_index);
+
+    if (pos_x < 0 || pos_x > this.mod_width_pix - 1 || pos_y < 0 || pos_y > this.mod_height_pix - 1) return;
+
+    byte select_color = this.bin_array_copy[pos_y * this.mod_width_pix + pos_x];
+    this.replacement_color = (byte)((this.replacement_color + 10) % 256); // couleur de remplissage symbolique
 
     Point p = new Point(pos_x, pos_y);
     q.add(p);
@@ -85,9 +84,13 @@ class Flood_fill {
         while ( is_to_fill(++east, p.y, this.tmp_bin_array, select_color) );
 
         for (int x = west + 1; x < east; x++) {
-          int pixel_index = p.y * this.width_pix + x;
-          this.tmp_bin_array[pixel_index] = replacement_color;
-          bin_array_copy[pixel_index] = pattern_layers[this.selected_pattern][pixel_index];
+
+          int pixel_index = p.y * this.mod_width_pix + x;
+          int pattern_pixel_index = p.y * TOTAL_WIDTH_PIX + x;
+
+          this.tmp_bin_array[pixel_index] = this.replacement_color;
+          this.bin_array_copy[pixel_index] = pattern[pattern_pixel_index];
+
           if ( is_to_fill(x, p.y - 1, this.tmp_bin_array, select_color) ) {
             q.add(new Point(x, p.y - 1));
           }
@@ -102,17 +105,12 @@ class Flood_fill {
   // Returns true if the specified pixel requires filling
   boolean is_to_fill(int pos_x, int pos_y, byte[]array, byte my_color) {
 
-    if (pos_x < 0 || pos_x >= this.width_pix || pos_y < 0 || pos_y >= this.height_pix) {
+    if (pos_x < 0 || pos_x >= this.mod_width_pix || pos_y < 0 || pos_y >= this.mod_height_pix) {
       return false;
     } else {
-      return array[pos_y * this.width_pix + pos_x] == my_color;
+      return array[pos_y * this.mod_width_pix + pos_x] == my_color;
     }
   }
-
-  byte[] get_array() {
-    return bin_array_copy;
-  }
-
 
   // Display all pixels
   void display(int vertical_pos) {
@@ -121,17 +119,16 @@ class Flood_fill {
     stroke(0); // Black lines
     fill(0);
 
-    for (int row_pos=0; row_pos<this.height_pix; row_pos++) {
-      int row_pixel_index = row_pos * this.width_pix;
+    for (int row_pos=0; row_pos<this.mod_height_pix; row_pos++) {
+      int row_pixel_index = row_pos * this.mod_width_pix;
 
-      for (int col_pos=0; col_pos<this.width_pix; col_pos++) {
+      for (int col_pos=0; col_pos<this.mod_width_pix; col_pos++) {
         int pixel_index = row_pixel_index + col_pos;
 
-        // TODO: Set the image positive or negative
         if (this.bin_array_copy[pixel_index] == 1) {
           fill(0);
           rect(
-            GRID_PADDING_SIZE + (offset_x_pix * PIXEL_SIZE) + (col_pos * PIXEL_SIZE),
+            GRID_PADDING_SIZE + this.mod_padding_x + (col_pos * PIXEL_SIZE),
             height/2 + (row_pos * PIXEL_SIZE) - (vertical_pos * PIXEL_SIZE),
             PIXEL_SIZE,
             PIXEL_SIZE
@@ -141,14 +138,8 @@ class Flood_fill {
     }
   }
 
-  void key_pressed(byte[]_array) {
-    if (key >= '0' && key <= '9') {
-      //Arrays.fill(this.tmp_bin_array, (byte)0);
-      System.arraycopy(_array, 0, this.tmp_bin_array, 0, this.width_pix * this.height_pix);
-
-      this.selected_pattern = key - '0';
-      println("Pattern sélectionné :", pattern_names[this.selected_pattern]);
-    }
+  void raz(byte[]source_array) {
+    System.arraycopy(source_array, 0, this.tmp_bin_array, 0, this.mod_width_pix * this.mod_height_pix);
   }
 }
 

@@ -1,5 +1,5 @@
 /*
- BROTHER KH-940
+ BROTHER KH-910 / KH-940
  2025 (c) maurin@etextile.org
  Used hardwear : AYAB shield V1.0 https://github.com/AllYarnsAreBeautiful/ayab-hardware
  This sketch read and knitt images & text

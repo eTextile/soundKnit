@@ -1,5 +1,5 @@
 /*
- BROTHER KH-940
+ BROTHER KH-910 / KH-940
  2025 (c) maurin@etextile.org
  Used hardwear : AYAB shield V1.0 https://github.com/AllYarnsAreBeautiful/ayab-hardware
  This sketch read and knitt images & text
@@ -8,102 +8,101 @@
 
 class Borders {
 
-  float left_pos_x;
-  int left_pos_x_pix;
+  int mod_width_pix;
+  float mod_width;
+  int mod_height_pix;
+  float mod_height;
 
-  int width_pix;
-  float _width;
-
-  int height_pix;
-  float _height;
-
-  float x_offset;
-  int x_offset_pix;
-
+  float border_left_pos_x;
+  int border_left_pos_x_pix;
   float borders_pos_y;
-
   float border_width;
   int border_width_pix;
 
-  int layers = 10;
-  byte[][]pattern_layers;
-  int selected_pattern = 3;
+  byte[]pattern;
 
-  Borders(int _module_width_pix, int _module_height_pix) {
+  Borders(byte[]_pattern, int _mod_width_pix, int _mod_height_pix) {
 
-    this.width_pix = _module_width_pix;
-    this._width = this.width_pix * PIXEL_SIZE;
+    this.pattern = _pattern;
 
-    this.height_pix = _module_height_pix;
-    this._height = this.height_pix * PIXEL_SIZE;
+    this.mod_width_pix = _mod_width_pix;
+    this.mod_width = this.mod_width_pix * PIXEL_SIZE;
 
-    this.border_width_pix = BORDER_WIDTH_PIX;
+    this.mod_height_pix = _mod_height_pix;
+    this.mod_height = this.mod_height_pix * PIXEL_SIZE;
+
+    if (this.mod_width_pix + BORDER_WIDTH_PIX * 2 < STITCHES) {
+      this.border_width_pix = BORDER_WIDTH_PIX;
+    } else {
+      this.border_width_pix = (int)((STITCHES - this.mod_width_pix) / 2);
+    }
     this.border_width = this.border_width_pix * PIXEL_SIZE;
 
-    this.x_offset = GRID_PADDING_SIZE + ((STITCHES - this.width_pix) / 2) * PIXEL_SIZE;
-    this.x_offset_pix = (int)(this.x_offset / PIXEL_SIZE);
+    this.border_left_pos_x = mod_offset_x - this.border_width;
+    this.border_left_pos_x_pix = (int)(this.border_left_pos_x / PIXEL_SIZE);
 
-    this.left_pos_x = this.x_offset - border_width;
-    this.left_pos_x_pix = (int)(this.left_pos_x / PIXEL_SIZE);
+}
 
-    pattern_layers = new byte[layers][this.x_offset_pix * this.height_pix];
+  void display(int vertical_pos) {
 
-    for (int pattern=0; pattern<layers; pattern++) {
-      for (int row_pos=0; row_pos<this.height_pix; row_pos++) {
-        int row_pixel_index = row_pos * this.x_offset_pix;
-        for (int col_pos=0; col_pos<this.x_offset_pix; col_pos++) {
-          int pixel_index = row_pixel_index + col_pos;
-          int background_pixel = pixel_index % (pattern + 2);
-          pattern_layers[pattern][pixel_index] = (background_pixel == 0) ? (byte)1 : (byte)0;
+    this.borders_pos_y = (height / 2) - vertical_pos * PIXEL_SIZE;
+
+    fill(0);
+
+    // Left border
+    for (int row_pos=0; row_pos<this.mod_height_pix; row_pos++) {
+      int pattern_row_pixel_index = row_pos * TOTAL_WIDTH_PIX;
+
+      for (int col_pos=this.border_left_pos_x_pix; col_pos<mod_offset_x_pix; col_pos++) {
+        int pattern_pixel_index = pattern_row_pixel_index + col_pos;
+
+        if (this.pattern[pattern_pixel_index] == 1) {
+
+          rect(
+            (this.border_left_pos_x_pix + (col_pos - this.border_left_pos_x_pix)) * PIXEL_SIZE,
+            this.borders_pos_y + row_pos * PIXEL_SIZE,
+            PIXEL_SIZE,
+            PIXEL_SIZE
+            );
+        }
+      }
+    }
+
+    // Right border
+    for (int row_pos=0; row_pos<this.mod_height_pix; row_pos++) {
+      int pattern_row_pixel_index = row_pos * TOTAL_WIDTH_PIX;
+
+      for (int col_pos = this.border_left_pos_x_pix + this.mod_width_pix; col_pos < this.border_left_pos_x_pix + this.mod_width_pix + this.border_width_pix; col_pos++) {
+        int pattern_pixel_index = pattern_row_pixel_index + col_pos;
+
+        if (this.pattern[pattern_pixel_index] == 1) {
+
+          // Left border
+          rect(
+            col_pos * PIXEL_SIZE + this.border_width,
+            this.borders_pos_y + row_pos * PIXEL_SIZE,
+            PIXEL_SIZE,
+            PIXEL_SIZE
+            );
         }
       }
     }
   }
 
-  void display(int vertical_pos) {
-
-    borders_pos_y = (height / 2) - vertical_pos * PIXEL_SIZE;
-    fill(0);
-
-    for (int row_pos=0; row_pos<this.height_pix; row_pos++) {
-      int row_pixel_index = row_pos * this.x_offset_pix;
-
-      for (int col_pos=0; col_pos<this.border_width_pix; col_pos++) {
-        int pixel_index = row_pixel_index + col_pos;
-
-        if (pattern_layers[this.selected_pattern][pixel_index] == 1) {
-
-          // Left border
-          rect(
-            this.x_offset - (col_pos + 1) * PIXEL_SIZE,
-            borders_pos_y + row_pos * PIXEL_SIZE,
-            PIXEL_SIZE,
-            PIXEL_SIZE
-            );
-
-          // Reight border
-          rect(
-            this.x_offset + this._width + col_pos * PIXEL_SIZE,
-            borders_pos_y + row_pos * PIXEL_SIZE,
-            PIXEL_SIZE,
-            PIXEL_SIZE
-            );
-        }
-      }
+  void update(byte[]pattern) {
+    if (mouseX > this.border_left_pos_x && mouseX < (this.border_left_pos_x + this.border_width) ||
+      mouseX > this.border_left_pos_x + this.mod_width && mouseX < this.border_left_pos_x + this.mod_width + this.border_width * 2) {
+       this.pattern = pattern;
     }
   }
 
   void dragged(float left_rule_pos_x) {
-    this.left_pos_x = left_rule_pos_x;
-    this.left_pos_x_pix = (int)(this.left_pos_x / PIXEL_SIZE);
-    this.border_width = this.x_offset - this.left_pos_x;
-    this.border_width_pix = (int)(this.border_width / PIXEL_SIZE);
-  }
+    this.border_left_pos_x = left_rule_pos_x;
 
-  byte[]pattern() {
-    if (mouseX > this.left_pos_x && mouseX < this.left_pos_x + this.border_width) {
-      this.selected_pattern = (this.selected_pattern + 1) % 10;
+    if (this.border_left_pos_x >= GRID_PADDING_SIZE) {
+      this.border_left_pos_x_pix = (int)(this.border_left_pos_x / PIXEL_SIZE);
+      this.border_width = mod_offset_x - this.border_left_pos_x;
+      this.border_width_pix = (int)(this.border_width / PIXEL_SIZE);
     }
-    return pattern_layers[this.selected_pattern];
   }
 }

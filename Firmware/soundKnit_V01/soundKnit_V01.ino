@@ -193,7 +193,7 @@ void serialEvent() {
 
 // Test if the LEFT end of ligne sensor is passed
 // If passed: request new row values
-void eol_left_read_complete(uint16_t eol_left_val, void *data) {
+void eol_left_read_complete(uint16_t eol_left_val) {
   noInterrupts();
   switch (cariage_dir) {
     case GOING_RIGHT:
@@ -218,7 +218,7 @@ void eol_left_read_complete(uint16_t eol_left_val, void *data) {
 
 // Test if the RIGHT end of ligne sensor is passed
 // If passed: request new row values
-void eol_right_read_complete(uint16_t eol_right_val, void *data) {
+void eol_right_read_complete(uint16_t eol_right_val) {
   noInterrupts();
   switch (cariage_dir) {
     case GOING_LEFT:
