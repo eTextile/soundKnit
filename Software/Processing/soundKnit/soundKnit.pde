@@ -38,7 +38,6 @@ byte[]background_array;
 byte[]merged_array;
 byte[]line_array;
 
-int current_pattern = 6;
 
 //KnittPict _module;
 KnittText _module;
@@ -60,7 +59,7 @@ final boolean DEBUG   = true; //
 
 void setup() {
   noLoop();
-  size(1000, 600);
+  size(1400, 600);
   if (COMPORT) myPort = new Serial(this, PORTNAME, BAUDERATE);
   PIXEL_SIZE = (width / ((GRID_PADDING_PIX * 2) + STITCHES));
   GRID_PADDING_SIZE = (GRID_PADDING_PIX * PIXEL_SIZE);
@@ -68,9 +67,9 @@ void setup() {
   // Pixellari.ttf
   // pixelated.ttf
   // dogica.ttf
-  _module = new KnittText(" \n Pourquoi \n  faire   simple  \n  quand   on  \n  peut    faire \n  complique \n ", "./typo/pixelated.ttf", 15);
-  //_module = new KnittText(" \n complique \n ", "./typo/pixelated.ttf", 15);
-  //_module = new KnittText(" \n complique \n ", "./typo/dogica.ttf", 8);
+  _module = new KnittText(" \n Pourquoi \n  faire   simple  \n  quand   on  \n  peut    faire \n  complique \n ", "../typo/pixelated.ttf", 15);
+  //_module = new KnittText(" \n complique \n ", "../typo/pixelated.ttf", 15);
+  //_module = new KnittText(" \n complique \n ", "../typo/dogica.ttf", 8);
 
   //_module = new KnittPict(loadImage("../pictures/Pauline.png"));
   //_module = new KnittPict(loadImage("../pictures/jabron2.png"));
@@ -80,7 +79,7 @@ void setup() {
   mod_offset_x_pix = (int)(mod_offset_x / PIXEL_SIZE);
 
   patterns = new Patterns(_module.height_pix);
-  pattern = patterns.get(current_pattern);
+  pattern = patterns.get(patterns.selector());
 
   bin_array = _module.get_array();
   merged_array = new byte[_module.width_pix * _module.height_pix];
@@ -99,9 +98,10 @@ void setup() {
 
   background.run(pattern, line_index);
   background.display(line_index);
-  background_array = background.bin_array_copy;
   grid.display(line_index);
 
+  background_array = background.bin_array_copy;
+  
   merged_array = merge3Images(
     pattern, borders.border_width_pix,
     background_array, _module.width_pix,
@@ -166,8 +166,7 @@ void serial_buffer_write(int vertical_pos) {
 
 void mouseClicked() {
 
-  patterns.selector();
-  pattern = patterns.get(current_pattern);
+  pattern = patterns.get(patterns.selector());
 
   borders.update(pattern);
 
@@ -184,7 +183,6 @@ void mouseDragged() {
   float left_rule_pos_x = rules.dragged();
   borders.dragged(left_rule_pos_x);
   total_line_width_pix = _module.width_pix + (borders.border_width_pix * 2);
-
   redraw();
 }
 

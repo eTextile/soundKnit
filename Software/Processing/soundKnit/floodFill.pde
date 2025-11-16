@@ -23,20 +23,6 @@ class Flood_fill {
   byte[]bin_array_copy;
   byte[]tmp_bin_array;
 
-
-  String[] pattern_names = {
-    "Trame 0 — Damier",
-    "Trame 1 — Lignes verticales 1",
-    "Trame 2 — Lignes diagonales",
-    "Trame 3 — Lignes verticales",
-    "Trame 4 — Lignes verticales 2",
-    "Trame 5 — Points réguliers diagonales",
-    "Trame 6 — Points réguliers",
-    "Trame 7 — Points réguliers droits 1",
-    "Trame 8 — Points réguliers droits 2",
-    "Trame 9 — Motif diagonales ecart"
-  };
-
   byte replacement_color = 0;
 
   Flood_fill(byte[]bin_array, int _mod_width_pix, int _mod_height_pix) {
