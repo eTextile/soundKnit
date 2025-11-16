@@ -146,8 +146,8 @@ void setup() {
 }
 
 void loop() {
-  //write_solenoides();
-  //make_bip();
+  write_solenoides();
+  make_bip();
 }
 
 uint8_t serial_byte_index = 0;  // Index for serial incomming bytes
@@ -193,7 +193,7 @@ void serialEvent() {
 
 // Test if the LEFT end of ligne sensor is passed
 // If passed: request new row values
-void eol_left_read_complete(uint16_t eol_left_val) {
+void eol_left_read_complete(uint16_t eol_left_val, void *data) {
   noInterrupts();
   switch (cariage_dir) {
     case GOING_RIGHT:
@@ -218,7 +218,7 @@ void eol_left_read_complete(uint16_t eol_left_val) {
 
 // Test if the RIGHT end of ligne sensor is passed
 // If passed: request new row values
-void eol_right_read_complete(uint16_t eol_right_val) {
+void eol_right_read_complete(uint16_t eol_right_val, void *data) {
   noInterrupts();
   switch (cariage_dir) {
     case GOING_LEFT:
