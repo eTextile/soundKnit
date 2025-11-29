@@ -28,7 +28,7 @@ final int BORDER_WIDTH_PIX = 10;         // Default value left & right borders
 
 float PIXEL_SIZE;
 float GRID_PADDING_SIZE;
-int TOTAL_WIDTH_PIX = STITCHES + GRID_PADDING_PIX * 2;
+final int TOTAL_WIDTH_PIX = STITCHES + GRID_PADDING_PIX * 2;
 
 char input_char;                   // Variable to store serial incoming data
 
@@ -38,9 +38,8 @@ byte[]background_array;
 byte[]merged_array;
 byte[]line_array;
 
-
-//KnittPict _module;
-KnittText _module;
+KnittPict _module;
+//KnittText _module;
 
 Grid grid;
 Flood_fill background;
@@ -61,18 +60,38 @@ void setup() {
   noLoop();
   size(1400, 600);
   if (COMPORT) myPort = new Serial(this, PORTNAME, BAUDERATE);
-  PIXEL_SIZE = (width / ((GRID_PADDING_PIX * 2) + STITCHES));
-  GRID_PADDING_SIZE = (GRID_PADDING_PIX * PIXEL_SIZE);
+  PIXEL_SIZE = width / (float)(GRID_PADDING_PIX * 2 + STITCHES);
+  GRID_PADDING_SIZE = (float)(GRID_PADDING_PIX * PIXEL_SIZE);
 
+  println("PIXEL_SIZE: " + PIXEL_SIZE);
   // Pixellari.ttf
   // pixelated.ttf
   // dogica.ttf
-  _module = new KnittText(" \n Pourquoi \n  faire   simple  \n  quand   on  \n  peut    faire \n  complique \n ", "../typo/pixelated.ttf", 15);
-  //_module = new KnittText(" \n complique \n ", "../typo/pixelated.ttf", 15);
+  /*
+  _module = new KnittText(
+    " \n Pourquoi \n  faire   simple  \n  quand   on  \n  peut    faire \n  complique \n ", "../typo/pixelated.ttf", 15
+    );
+    
+  _module = new KnittText(
+    " \n \n  Collectivement  \n  cette colère  \n  on peut en faire \n  un incendie, \n  on peut en faire \n  un incendie \n \n ",
+    "../typo/Pixellari.ttf", 16);
+*/
+/* _module = new KnittText(
+    " \n HAKITO \n ERGO \n SUM \n ",
+    "../typo/Funny Barber.ttf", 35);
+*/
+/*
+  _module = new KnittText(
+    " \n \n      NON, \n JSUIS PAS \n MISANDRE \n \n  JAI MEME \n   UN AMI  \n   HOMME  \n \n ",
+    "../typo/Funny Barber.ttf", 30);
+  */  
+    
+  //_module = new KnittText(" \n \n  T'ES  \n  BEAU  \n  SUR  \n  TON  \n  VELO  \n \n ", "../typo/Hangout3D.ttf", 30);
   //_module = new KnittText(" \n complique \n ", "../typo/dogica.ttf", 8);
 
   //_module = new KnittPict(loadImage("../pictures/Pauline.png"));
   //_module = new KnittPict(loadImage("../pictures/jabron2.png"));
+  _module = new KnittPict(loadImage("../pictures/piment.png"));
 
   //The left position of the module in the window
   mod_offset_x = GRID_PADDING_SIZE + ((STITCHES - _module.width_pix) / 2) * PIXEL_SIZE;
@@ -101,7 +120,7 @@ void setup() {
   grid.display(line_index);
 
   background_array = background.bin_array_copy;
-  
+
   merged_array = merge3Images(
     pattern, borders.border_width_pix,
     background_array, _module.width_pix,
@@ -146,11 +165,11 @@ void serial_buffer_write(int vertical_pos) {
   }
 
   if (COMPORT) {
+    //myPort.write(line_array);
     for (int i = 0; i < total_line_width_pix; i++) {
       myPort.write(line_array[i]);
       delay(1);
     }
-    myPort.write(line_array);
     delay(20);
     myPort.write(FOOTER);
   }

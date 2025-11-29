@@ -88,14 +88,15 @@ class Borders {
       }
     }
   }
-
+  
   void update(byte[]pattern) {
     if (mouseX > this.border_left_pos_x && mouseX < (this.border_left_pos_x + this.border_width) ||
       mouseX > this.border_left_pos_x + this.mod_width && mouseX < this.border_left_pos_x + this.mod_width + this.border_width * 2) {
        this.pattern = pattern;
     }
   }
-
+  
+  
   void dragged(float left_rule_pos_x) {
     this.border_left_pos_x = left_rule_pos_x;
 

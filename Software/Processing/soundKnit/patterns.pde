@@ -13,7 +13,7 @@ class Patterns {
   int height_pix;
   byte[][]pattern_layers;
 
-  int[]cool_patterns = {0, 1, 2, 3, 6, 8, 10, 12, 13, 18, 21, 26};
+  int[]cool_patterns = {0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 13, 18, 21, 26};
   int pattern_num;
 
   String[] pattern_names = {
@@ -40,11 +40,19 @@ class Patterns {
     for (int pattern_index=0; pattern_index<PATTERN_LAYERS; pattern_index++) {
       for (int row_pos=0; row_pos<this.height_pix; row_pos++) {
         int row_pixel_index = row_pos * TOTAL_WIDTH_PIX;
+        int mod = pattern_index + 1;
         for (int col_pos=0; col_pos<TOTAL_WIDTH_PIX; col_pos++) {
+          
           pixel_index = row_pixel_index + col_pos;
-          background_pixel = pixel_index % (pattern_index + 1);
+          
+          background_pixel = (int) ((pixel_index / 3) % ((mod / 3) + 1));
+          
+          //print(background_pixel + " ");
+          
           this.pattern_layers[pattern_index][pixel_index] = (background_pixel == 0) ? (byte)1 : (byte)0;
+          //this.pattern_layers[pattern_index][pixel_index] = (background_pixel == 0) ? (byte)0 : (byte)1;
         }
+        //println();
       }
     }
   }
